@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TNG Playlists</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "lit": "https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js",
+      "lit/decorators.js": "https://cdn.jsdelivr.net/gh/lit/dist@3/decorators/decorators.min.js",
+      "lit/directives/style-map.js": "https://cdn.jsdelivr.net/gh/lit/dist@3/directives/style-map.min.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-icon">🖖</span>
+      <h1>TNG Playlists</h1>
+    </div>
+    <nav class="tab-bar" id="tab-bar">
+      <button class="tab active" data-tab="browse">Episodes</button>
+      <button class="tab" data-tab="playlists">Playlists</button>
+      <button class="tab" data-tab="characters">Characters</button>
+    </nav>
+  </header>
+
+  <!-- ============ BROWSE TAB ============ -->
+  <main id="tab-browse" class="tab-panel active">
+    <section class="search-bar">
+      <input type="text" id="search-input" placeholder="Search episodes… e.g. &quot;omnipotent being puts humanity on trial&quot;" autocomplete="off">
+      <button id="search-btn" class="btn btn-primary">Search</button>
+    </section>
+
+    <section class="filters" id="filters">
+      <select id="filter-season" class="filter">
+        <option value="">All seasons</option>
+        <option value="1">Season 1</option>
+        <option value="2">Season 2</option>
+        <option value="3">Season 3</option>
+        <option value="4">Season 4</option>
+        <option value="5">Season 5</option>
+        <option value="6">Season 6</option>
+        <option value="7">Season 7</option>
+      </select>
+      <input type="text" id="filter-character" class="filter" placeholder="Character (e.g. Q)" list="character-list">
+      <datalist id="character-list"></datalist>
+      <input type="text" id="filter-keyword" class="filter" placeholder="Keyword (e.g. cloaking device)">
+      <select id="filter-category" class="filter">
+        <option value="">Any category</option>
+        <option value="place">Place</option>
+        <option value="race">Race / Species</option>
+        <option value="faction">Faction</option>
+        <option value="technology">Technology</option>
+        <option value="theme">Theme</option>
+        <option value="ship">Starship</option>
+        <option value="character">Character</option>
+      </select>
+      <input type="text" id="filter-writer" class="filter" placeholder="Writer name">
+      <input type="text" id="filter-director" class="filter" placeholder="Director name">
+      <button id="filter-clear" class="btn btn-ghost">Clear filters</button>
+    </section>
+
+    <section id="results-info" class="results-info"></section>
+    <section id="episode-grid" class="episode-grid"></section>
+    <div id="loading" class="loading" hidden>Loading…</div>
+  </main>
+
+  <!-- ============ PLAYLISTS TAB ============ -->
+  <main id="tab-playlists" class="tab-panel">
+    <section class="playlist-create">
+      <input type="text" id="playlist-name" placeholder="New playlist name">
+      <input type="text" id="playlist-desc" placeholder="Description (optional)">
+      <button id="playlist-create-btn" class="btn btn-primary">Create</button>
+    </section>
+    <section id="playlist-list" class="playlist-list"></section>
+    <section id="playlist-detail" class="playlist-detail" hidden>
+      <h2 id="playlist-detail-title"></h2>
+      <div id="playlist-detail-episodes" class="episode-grid"></div>
+    </section>
+  </main>
+
+  <!-- ============ CHARACTERS TAB ============ -->
+  <main id="tab-characters" class="tab-panel">
+    <section class="search-bar">
+      <input type="text" id="char-search-input" placeholder="Find a character… e.g. BARCLAY" autocomplete="off">
+    </section>
+    <section id="character-list" class="character-list"></section>
+  </main>
+
+  <!-- Episode detail modal -->
+  <div id="episode-modal" class="modal" hidden>
+    <div class="modal-content">
+      <button class="modal-close" id="modal-close">✕</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" hidden></div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

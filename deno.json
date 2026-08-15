@@ -1,0 +1,24 @@
+{
+  "tasks": {
+    "start": "deno run --allow-net --allow-read --allow-env --allow-write api/main.ts",
+    "seed": "deno run --allow-read --allow-write --allow-net --allow-env --allow-ffi scripts/seed.ts",
+    "embeddings": "deno run --allow-read --allow-write --allow-net --allow-env scripts/embeddings.ts",
+    "search": "deno run --allow-read --allow-write --allow-net --allow-env scripts/search.ts",
+    "pg:start": "/usr/lib/postgresql/17/bin/pg_ctl -D /home/harri/pgdata -l /home/harri/pgdata/server.log -o \"-p 5434 -k /home/harri/pgdata/sock\" start",
+    "pg:stop": "/usr/lib/postgresql/17/bin/pg_ctl -D /home/harri/pgdata stop"
+  },
+  "compilerOptions": {
+    "strict": true
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  },
+  "fmt": {
+    "lineWidth": 100,
+    "indentWidth": 2,
+    "semiColons": true,
+    "singleQuote": false
+  }
+}
