@@ -109,6 +109,43 @@ body {
 .user-email { font-weight: 600; flex: 0 1 auto; }
 .user-meta { font-size: 0.8rem; color: var(--text-dim); flex: 1; }
 
+/* ---------- Static pages (privacy, about) ---------- */
+.static-page .app-header .tab-bar { margin-top: 0.4rem; }
+.static-page .app-header .tab { text-decoration: none; }
+
+.legal-content {
+  max-width: 720px;
+  margin: 2rem auto;
+  padding: 0 1.25rem;
+}
+
+.legal-content h1 { font-size: 1.6rem; margin-bottom: 0.25rem; }
+.legal-content h2 {
+  font-size: 1.15rem;
+  margin: 1.75rem 0 0.5rem;
+  color: var(--accent-2);
+}
+.legal-content h3 {
+  font-size: 1rem;
+  margin: 1.25rem 0 0.25rem;
+  color: var(--text);
+}
+.legal-content p { margin: 0.5rem 0; color: var(--text-dim); }
+.legal-content ul { margin: 0.5rem 0 0.5rem 1.5rem; color: var(--text-dim); }
+.legal-content li { margin: 0.25rem 0; }
+.legal-content a { color: var(--accent-2); }
+.legal-updated { font-size: 0.85rem; color: var(--text-dim); }
+
+.app-footer {
+  text-align: center;
+  padding: 1.25rem;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+.app-footer a { color: var(--accent-2); text-decoration: none; margin: 0 0.6rem; }
+
+
 .tab {
   background: transparent;
   border: 1px solid var(--border);
