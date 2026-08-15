@@ -28,3 +28,12 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);
+
+-- Per-user watched episodes. NOT a global flag: each user tracks their own.
+-- (Signed-out guests keep the same list in browser localStorage instead.)
+CREATE TABLE IF NOT EXISTS watched_episodes (
+  user_id    INT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  episode_id INT NOT NULL REFERENCES episodes(episode_id) ON DELETE CASCADE,
+  watched_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, episode_id)
+);

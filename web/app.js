@@ -5,6 +5,11 @@
 
 const API_BASE = "/api";
 
+// Guests keep their watched list here (JSON array of episode ids). Signed-in
+// users get server-side sync instead — the two stores are kept separate, so
+// signing in never uploads (or clobbers) a guest list.
+const WATCHED_LS_KEY = "tngplaylists.watched";
+
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
@@ -15,6 +20,9 @@ const state = {
   playlists: [],
   currentPlaylist: null,
   user: null,
+  // Watched episode ids. Signed in → mirrors the server; signed out → mirrors
+  // localStorage. Deliberately never merged (see WATCHED_LS_KEY below).
+  watched: new Set(),
   filters: {
     season: "",
     character: "",
@@ -75,6 +83,7 @@ async function loadAuth() {
     state.user = null;
   }
   renderAuth();
+  await loadWatched();
 }
 
 function renderAuth() {
@@ -85,6 +94,7 @@ function renderAuth() {
     const btn = el("a", "btn btn-ghost btn-sm", "Sign in with Google");
     btn.href = "/api/auth/login";
     area.appendChild(btn);
+    area.appendChild(clearLocalDataLink());
     document.querySelectorAll(".write-only").forEach((e) => (e.hidden = true));
     $("#admin-tab").hidden = true;
     return;
@@ -108,9 +118,11 @@ function renderAuth() {
     } catch { /* best effort */ }
     state.user = null;
     renderAuth();
+    loadWatched();
     loadEpisodes();
   });
   area.appendChild(logout);
+  area.appendChild(deleteAccountButton());
 
   document.querySelectorAll(".write-only").forEach((e) => (e.hidden = !canWrite()));
   $("#admin-tab").hidden = !isAdmin();
@@ -121,6 +133,152 @@ function renderAuth() {
       state.episodes.length > 0 && state.episodes.length <= 12 && canWrite()
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Watched episodes — hybrid store
+//
+// Signed in: the server is the source of truth (synced across devices).
+// Signed out: the browser's localStorage is. The two are never merged — on
+// sign-in the server list simply takes over.
+// ---------------------------------------------------------------------------
+
+/** Read the guest watched list from localStorage (never throws). */
+function readGuestWatched() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(WATCHED_LS_KEY) ?? "[]");
+    return new Set(Array.isArray(raw) ? raw.map(Number).filter(Number.isInteger) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeGuestWatched(set) {
+  try {
+    localStorage.setItem(WATCHED_LS_KEY, JSON.stringify([...set]));
+  } catch { /* private mode / quota — the in-memory Set still works */ }
+}
+
+/** Fill state.watched from whichever store applies, then paint the cards. */
+async function loadWatched() {
+  if (state.user) {
+    try {
+      const data = await api("/watched");
+      state.watched = new Set(data.watched.map(Number));
+    } catch {
+      state.watched = new Set();
+    }
+  } else {
+    state.watched = readGuestWatched();
+  }
+  renderWatchedMarks();
+}
+
+const isWatched = (episodeId) => state.watched.has(Number(episodeId));
+
+/** Toggle one episode: API when signed in, localStorage-only when a guest. */
+async function toggleWatched(episodeId) {
+  const id = Number(episodeId);
+  const nowWatched = !state.watched.has(id);
+
+  if (state.user) {
+    try {
+      await api(`/watched/${id}`, { method: nowWatched ? "PUT" : "DELETE" });
+    } catch (err) {
+      toast(err.message);
+      return;
+    }
+  }
+
+  if (nowWatched) state.watched.add(id);
+  else state.watched.delete(id);
+  if (!state.user) writeGuestWatched(state.watched);
+
+  renderWatchedMarks();
+}
+
+/**
+ * Build the ✓ toggle for an episode card. Used by BOTH card builders — the
+ * browse grid and the playlist detail grid — so keep those two in sync.
+ */
+function watchedToggle(episodeId) {
+  const btn = el("button", "ep-watched", "✓");
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation(); // must not open the episode modal
+    toggleWatched(episodeId);
+  });
+  return btn;
+}
+
+/** Sync every rendered card with state.watched (no refetch, no re-layout). */
+function renderWatchedMarks() {
+  document.querySelectorAll(".episode-card[data-episode-id]").forEach((card) => {
+    const on = isWatched(card.dataset.episodeId);
+    card.classList.toggle("watched", on);
+    const btn = card.querySelector(".ep-watched");
+    if (!btn) return;
+    btn.classList.toggle("on", on);
+    btn.setAttribute("aria-pressed", String(on));
+    btn.title = on ? "Watched — click to unmark" : "Mark as watched";
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Account actions — delete account (signed in) / clear local data (guest)
+// ---------------------------------------------------------------------------
+
+/** Drop every tngplaylists.* key this site stores in the browser. */
+function clearLocalData() {
+  Object.keys(localStorage)
+    .filter((k) => k.startsWith("tngplaylists."))
+    .forEach((k) => localStorage.removeItem(k));
+}
+
+function clearLocalDataLink() {
+  const link = el("button", "link-quiet", "Clear my local data");
+  link.title = "Remove the watched list stored in this browser";
+  link.addEventListener("click", () => {
+    if (!confirm(
+      "Clear the data this site keeps in your browser (your watched-episode " +
+      "list)?\n\nNothing is sent to the server — this only affects this " +
+      "browser, and cannot be undone.",
+    )) return;
+    clearLocalData();
+    state.watched = new Set();
+    renderWatchedMarks();
+    toast("Local data cleared");
+  });
+  return link;
+}
+
+function deleteAccountButton() {
+  const btn = el("button", "btn btn-danger btn-sm", "Delete account");
+  btn.addEventListener("click", async () => {
+    if (!confirm(
+      "Permanently delete your TNG Playlists account?\n\n" +
+      "This removes your account, your sign-in sessions and your watched " +
+      "episodes from our server, and clears the data this site keeps in your " +
+      "browser. Playlists stay on the site (they are shared content), and " +
+      "your Google account is not affected.\n\nThis cannot be undone.",
+    )) return;
+
+    try {
+      await api("/auth/me", { method: "DELETE" });
+    } catch (err) {
+      // e.g. 409 "Cannot delete the last admin account" — stay signed in.
+      toast(err.message);
+      return;
+    }
+
+    clearLocalData();
+    state.user = null;
+    state.watched = new Set();
+    renderAuth();
+    renderWatchedMarks();
+    loadEpisodes();
+    toast("Account deleted");
+  });
+  return btn;
 }
 
 // ---------------------------------------------------------------------------
@@ -196,6 +354,7 @@ function renderEpisodes(episodes, mode) {
 
   episodes.forEach((ep) => {
     const card = el("div", "episode-card");
+    card.dataset.episodeId = ep.episode_id;
     const badge = el("span", "ep-badge", `S${ep.season}E${String(ep.episode_number).padStart(2, "0")}`);
     const title = el("div", "ep-title", ep.title);
     card.appendChild(badge);
@@ -213,9 +372,12 @@ function renderEpisodes(episodes, mode) {
       card.appendChild(sim);
     }
 
+    card.appendChild(watchedToggle(ep.episode_id));
     card.addEventListener("click", () => openEpisodeModal(ep.episode_id));
     grid.appendChild(card);
   });
+
+  renderWatchedMarks();
 }
 
 function emptyState(icon, text) {
@@ -419,6 +581,7 @@ async function openPlaylist(id) {
     }
     p.episodes.forEach((ep) => {
       const card = el("div", "episode-card");
+      card.dataset.episodeId = ep.episode_id;
       card.appendChild(el("span", "ep-badge", `S${ep.season}E${String(ep.episode_number).padStart(2, "0")}`));
       card.appendChild(el("div", "ep-title", ep.title));
       if (canWrite()) {
@@ -430,9 +593,13 @@ async function openPlaylist(id) {
         });
         card.appendChild(rm);
       }
+      // Appended after the remove button so the CSS can offset it (see .ep-watched)
+      card.appendChild(watchedToggle(ep.episode_id));
       card.addEventListener("click", () => openEpisodeModal(ep.episode_id));
       grid.appendChild(card);
     });
+
+    renderWatchedMarks();
   } catch (err) {
     toast(err.message);
   }

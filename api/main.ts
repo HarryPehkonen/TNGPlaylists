@@ -16,6 +16,7 @@ import { charactersRouter } from "./characters.ts";
 import { searchRouter } from "./search.ts";
 import { keywordsRouter } from "./keywords.ts";
 import { playlistsRouter } from "./playlists.ts";
+import { watchedRouter } from "./watched.ts";
 import { authRouter } from "./auth.ts";
 import { getClient } from "./db.ts";
 
@@ -92,6 +93,8 @@ app.use(keywordsRouter.routes());
 app.use(keywordsRouter.allowedMethods());
 app.use(playlistsRouter.routes());
 app.use(playlistsRouter.allowedMethods());
+app.use(watchedRouter.routes());
+app.use(watchedRouter.allowedMethods());
 
 // Static files (web frontend)
 app.use(async (ctx, next) => {

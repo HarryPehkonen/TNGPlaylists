@@ -7,6 +7,7 @@
  * - GET  /api/auth/login    → redirect to Google OAuth
  * - GET  /api/auth/callback → exchange code, upsert user, set session cookie
  * - GET  /api/auth/me       → current user (or null)
+ * - DELETE /api/auth/me     → delete own account (last admin is protected)
  * - POST /api/auth/logout   → destroy session
  * - GET  /api/auth/users    → admin: list users
  * - POST /api/auth/users/:id/role → admin: set role
@@ -320,6 +321,38 @@ authRouter.get("/api/auth/callback", async (ctx) => {
 authRouter.get("/api/auth/me", async (ctx) => {
   const user = await getCurrentUser(ctx);
   ctx.response.body = { success: true, data: { user } };
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/auth/me — self-service account deletion
+//
+// Removes the site's copy of the account only; the user's Google account is
+// untouched. Sessions, provider links and watched episodes go with it via
+// ON DELETE CASCADE. Playlists are shared site content (no owner column) and
+// are deliberately left alone.
+// ---------------------------------------------------------------------------
+
+authRouter.delete("/api/auth/me", requireAuth, async (ctx) => {
+  const user = ctx.state.user as AuthUser;
+
+  // Last-admin guard: don't let the site be left with nobody who can
+  // administer it.
+  if (user.role === "admin") {
+    const countRes = await queryObject(
+      `SELECT COUNT(*)::int AS admin_count FROM users WHERE role = 'admin'`,
+    );
+    if (Number(countRes.rows[0]?.admin_count ?? 0) <= 1) {
+      ctx.response.status = 409;
+      ctx.response.body = { success: false, error: "Cannot delete the last admin account" };
+      return;
+    }
+  }
+
+  await queryObject(`DELETE FROM users WHERE user_id = $1`, [user.user_id]);
+
+  // The session row is already gone (cascade) — clear the cookie too.
+  deleteCookie(ctx.response.headers, SESSION_COOKIE, { path: "/" });
+  ctx.response.body = { success: true, data: { deleted: true } };
 });
 
 // ---------------------------------------------------------------------------
