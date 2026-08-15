@@ -14,6 +14,7 @@ import { Application, send } from "jsr:@oak/oak";
 import { episodesRouter } from "./episodes.ts";
 import { charactersRouter } from "./characters.ts";
 import { searchRouter } from "./search.ts";
+import { keywordsRouter } from "./keywords.ts";
 import { playlistsRouter } from "./playlists.ts";
 import { authRouter } from "./auth.ts";
 import { getClient } from "./db.ts";
@@ -87,6 +88,8 @@ app.use(charactersRouter.routes());
 app.use(charactersRouter.allowedMethods());
 app.use(searchRouter.routes());
 app.use(searchRouter.allowedMethods());
+app.use(keywordsRouter.routes());
+app.use(keywordsRouter.allowedMethods());
 app.use(playlistsRouter.routes());
 app.use(playlistsRouter.allowedMethods());
 

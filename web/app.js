@@ -684,6 +684,7 @@ $("#search-input").addEventListener("keydown", (e) => {
 ["season", "character", "keyword", "category", "writer", "director"].forEach((f) => {
   $(`#filter-${f}`).addEventListener("change", () => {
     state.filters[f] = $(`#filter-${f}`).value;
+    if (f === "category") loadKeywordDatalist();
     loadEpisodes();
   });
 });
@@ -694,22 +695,56 @@ $("#filter-clear").addEventListener("click", () => {
     state.filters[f] = "";
   });
   $("#search-input").value = "";
+  loadKeywordDatalist();
   loadEpisodes();
 });
 
-// Preload character datalist
+// Preload character datalist (alphabetical — the API sorts by line count)
 (async () => {
   try {
-    const data = await api("/characters?limit=500");
+    const data = await api("/characters?limit=1000");
     const dl = $("#character-list");
-    data.characters.slice(0, 200).forEach((c) => {
-      const opt = el("option");
-      opt.value = c.character_name;
-      dl.appendChild(opt);
-    });
+    [...data.characters]
+      .sort((a, b) => a.character_name.localeCompare(b.character_name))
+      .slice(0, 500)
+      .forEach((c) => {
+        const opt = el("option");
+        opt.value = c.character_name;
+        dl.appendChild(opt);
+      });
   } catch { /* non-critical */ }
 })();
 
+// Category-aware keyword datalist + placeholder
+const CATEGORY_PLACEHOLDERS = {
+  place: "Place (e.g. starbase 515)",
+  race: "Race / species (e.g. Vulcan)",
+  faction: "Faction (e.g. Klingon Empire)",
+  technology: "Technology (e.g. cloaking device)",
+  theme: "Theme (e.g. duty)",
+  ship: "Starship (e.g. Enterprise)",
+  character: "Character keyword (e.g. Q)",
+};
+
+async function loadKeywordDatalist() {
+  const cat = state.filters.category;
+  const input = $("#filter-keyword");
+  const dl = $("#keyword-list");
+  input.placeholder = cat && CATEGORY_PLACEHOLDERS[cat]
+    ? CATEGORY_PLACEHOLDERS[cat]
+    : "Keyword (e.g. cloaking device)";
+  dl.innerHTML = "";
+  try {
+    const data = await api(`/keywords${cat ? `?category=${encodeURIComponent(cat)}` : ""}`);
+    data.keywords.forEach((k) => {
+      const opt = el("option");
+      opt.value = k.canonical;
+      dl.appendChild(opt);
+    });
+  } catch { /* non-critical */ }
+}
+
 // Initial load
 loadAuth();
+loadKeywordDatalist();
 loadEpisodes();
