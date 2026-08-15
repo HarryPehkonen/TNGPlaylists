@@ -51,6 +51,64 @@ body {
   gap: 0.5rem;
   margin-top: 0.6rem;
 }
+
+.auth-area {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.user-chip img {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+}
+
+.role-badge {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--accent-2);
+  color: #000;
+  padding: 0.1rem 0.45rem;
+  border-radius: 10px;
+}
+
+.auth-hint {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-left: 0.5rem;
+}
+
+.user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.user-email { font-weight: 600; flex: 0 1 auto; }
+.user-meta { font-size: 0.8rem; color: var(--text-dim); flex: 1; }
+
 .tab {
   background: transparent;
   border: 1px solid var(--border);

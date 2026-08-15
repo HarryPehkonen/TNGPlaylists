@@ -12,6 +12,7 @@
 
 import { Router } from "jsr:@oak/oak";
 import { queryObject } from "./db.ts";
+import { requireRole } from "./auth.ts";
 
 export const playlistsRouter = new Router();
 
@@ -37,7 +38,7 @@ playlistsRouter.get("/api/playlists", async (ctx) => {
 // POST /api/playlists
 // ---------------------------------------------------------------------------
 
-playlistsRouter.post("/api/playlists", async (ctx) => {
+playlistsRouter.post("/api/playlists", requireRole("writer"), async (ctx) => {
   const body = await ctx.request.body.json().catch(() => null);
   if (!body?.name || typeof body.name !== "string") {
     ctx.response.status = 400;
@@ -104,7 +105,7 @@ playlistsRouter.get("/api/playlists/:id", async (ctx) => {
 // PUT /api/playlists/:id
 // ---------------------------------------------------------------------------
 
-playlistsRouter.put("/api/playlists/:id", async (ctx) => {
+playlistsRouter.put("/api/playlists/:id", requireRole("writer"), async (ctx) => {
   const id = parseInt(ctx.params.id ?? "", 10);
   if (!Number.isInteger(id)) {
     ctx.response.status = 400;
@@ -149,7 +150,7 @@ playlistsRouter.put("/api/playlists/:id", async (ctx) => {
 // DELETE /api/playlists/:id
 // ---------------------------------------------------------------------------
 
-playlistsRouter.delete("/api/playlists/:id", async (ctx) => {
+playlistsRouter.delete("/api/playlists/:id", requireRole("writer"), async (ctx) => {
   const id = parseInt(ctx.params.id ?? "", 10);
   if (!Number.isInteger(id)) {
     ctx.response.status = 400;
@@ -174,7 +175,7 @@ playlistsRouter.delete("/api/playlists/:id", async (ctx) => {
 // POST /api/playlists/:id/episodes — add episode
 // ---------------------------------------------------------------------------
 
-playlistsRouter.post("/api/playlists/:id/episodes", async (ctx) => {
+playlistsRouter.post("/api/playlists/:id/episodes", requireRole("writer"), async (ctx) => {
   const id = parseInt(ctx.params.id ?? "", 10);
   if (!Number.isInteger(id)) {
     ctx.response.status = 400;
@@ -212,7 +213,7 @@ playlistsRouter.post("/api/playlists/:id/episodes", async (ctx) => {
 // DELETE /api/playlists/:id/episodes/:episodeId
 // ---------------------------------------------------------------------------
 
-playlistsRouter.delete("/api/playlists/:id/episodes/:episodeId", async (ctx) => {
+playlistsRouter.delete("/api/playlists/:id/episodes/:episodeId", requireRole("writer"), async (ctx) => {
   const id = parseInt(ctx.params.id ?? "", 10);
   const episodeId = parseInt(ctx.params.episodeId ?? "", 10);
   if (!Number.isInteger(id) || !Number.isInteger(episodeId)) {

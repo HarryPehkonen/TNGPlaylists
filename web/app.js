@@ -15,6 +15,7 @@ const state = {
   characters: [],
   playlists: [],
   currentPlaylist: null,
+  user: null,
   filters: {
     season: "",
     character: "",
@@ -61,6 +62,62 @@ function esc(s) {
 }
 
 // ---------------------------------------------------------------------------
+// Auth
+// ---------------------------------------------------------------------------
+const canWrite = () =>
+  state.user && (state.user.role === "writer" || state.user.role === "admin");
+const isAdmin = () => state.user?.role === "admin";
+
+async function loadAuth() {
+  try {
+    const data = await api("/auth/me");
+    state.user = data.user;
+  } catch {
+    state.user = null;
+  }
+  renderAuth();
+}
+
+function renderAuth() {
+  const area = $("#auth-area");
+  area.innerHTML = "";
+
+  if (!state.user) {
+    const btn = el("a", "btn btn-ghost btn-sm", "Sign in with Google");
+    btn.href = "/api/auth/login";
+    area.appendChild(btn);
+    document.querySelectorAll(".write-only").forEach((e) => (e.hidden = true));
+    $("#admin-tab").hidden = true;
+    return;
+  }
+
+  const chip = el("div", "user-chip");
+  if (state.user.picture) {
+    const img = document.createElement("img");
+    img.src = state.user.picture;
+    img.alt = "";
+    chip.appendChild(img);
+  }
+  chip.appendChild(el("span", null, state.user.email));
+  chip.appendChild(el("span", "role-badge", state.user.role));
+  area.appendChild(chip);
+
+  const logout = el("button", "btn btn-ghost btn-sm", "Sign out");
+  logout.addEventListener("click", async () => {
+    try {
+      await api("/auth/logout", { method: "POST" });
+    } catch { /* best effort */ }
+    state.user = null;
+    renderAuth();
+    loadEpisodes();
+  });
+  area.appendChild(logout);
+
+  document.querySelectorAll(".write-only").forEach((e) => (e.hidden = !canWrite()));
+  $("#admin-tab").hidden = !isAdmin();
+}
+
+// ---------------------------------------------------------------------------
 // Tabs
 // ---------------------------------------------------------------------------
 document.querySelectorAll(".tab").forEach((btn) => {
@@ -74,6 +131,7 @@ document.querySelectorAll(".tab").forEach((btn) => {
     if (tab === "browse") loadEpisodes();
     if (tab === "playlists") loadPlaylists();
     if (tab === "characters") loadCharacters();
+    if (tab === "admin") loadUsers();
   });
 });
 
@@ -280,6 +338,13 @@ async function openEpisodeModal(id) {
     const addBtn = el("button", "btn btn-primary btn-sm", "＋ Add to playlist");
     addBtn.addEventListener("click", () => promptAddToPlaylist(ep.episode_id));
     actions.appendChild(addBtn);
+    if (!state.user) {
+      const hint = el("span", "auth-hint", "Sign in to add to playlists");
+      actions.appendChild(hint);
+    } else if (!canWrite()) {
+      const hint = el("span", "auth-hint", "Write access requires admin approval");
+      actions.appendChild(hint);
+    }
     body.appendChild(actions);
 
   } catch (err) {
@@ -351,6 +416,14 @@ async function openPlaylist(id) {
 }
 
 async function promptAddToPlaylist(episodeId) {
+  if (!state.user) {
+    toast("Sign in to create playlists");
+    return;
+  }
+  if (!canWrite()) {
+    toast("Write access requires admin approval");
+    return;
+  }
   if (!state.playlists.length) {
     await loadPlaylists();
   }
@@ -504,6 +577,54 @@ async function openEpisodeModalBySeason(season, epNum) {
 }
 
 // ---------------------------------------------------------------------------
+// Admin: user management
+// ---------------------------------------------------------------------------
+async function loadUsers() {
+  const list = $("#user-list");
+  list.innerHTML = "";
+  if (!isAdmin()) {
+    list.appendChild(emptyState("🔒", "Admin only"));
+    return;
+  }
+
+  try {
+    const data = await api("/auth/users");
+    const users = data.users;
+    if (!users.length) {
+      list.appendChild(emptyState("👤", "No users yet."));
+      return;
+    }
+    users.forEach((u) => {
+      const row = el("div", "user-row");
+      row.appendChild(el("span", "user-email", u.email));
+      row.appendChild(el("span", "role-badge", u.role));
+      row.appendChild(el("span", "user-meta",
+        `joined ${(u.created_at ?? "").slice(0, 10)} · ${u.active_sessions} session(s)`));
+      if (u.role !== "admin") {
+        const btn = el("button", "btn btn-sm",
+          u.role === "writer" ? "Revoke write" : "Grant write");
+        btn.addEventListener("click", async () => {
+          try {
+            await api(`/auth/users/${u.user_id}/role`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ role: u.role === "writer" ? "reader" : "writer" }),
+            });
+            loadUsers();
+          } catch (err) {
+            toast(err.message);
+          }
+        });
+        row.appendChild(btn);
+      }
+      list.appendChild(row);
+    });
+  } catch (err) {
+    list.appendChild(emptyState("⚠️", err.message));
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Event wiring
 // ---------------------------------------------------------------------------
 $("#search-btn").addEventListener("click", loadEpisodes);
@@ -553,4 +674,5 @@ function debounce(fn, ms) {
 })();
 
 // Initial load
+loadAuth();
 loadEpisodes();

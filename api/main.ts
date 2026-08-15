@@ -15,6 +15,7 @@ import { episodesRouter } from "./episodes.ts";
 import { charactersRouter } from "./characters.ts";
 import { searchRouter } from "./search.ts";
 import { playlistsRouter } from "./playlists.ts";
+import { authRouter } from "./auth.ts";
 import { getClient } from "./db.ts";
 
 const PORT = parseInt(Deno.env.get("PORT") ?? "8090", 10);
@@ -71,6 +72,8 @@ app.use(async (ctx, next) => {
 });
 
 // Routes
+app.use(authRouter.routes());
+app.use(authRouter.allowedMethods());
 app.use(episodesRouter.routes());
 app.use(episodesRouter.allowedMethods());
 app.use(charactersRouter.routes());
