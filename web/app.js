@@ -114,6 +114,9 @@ function renderAuth() {
 
   document.querySelectorAll(".write-only").forEach((e) => (e.hidden = !canWrite()));
   $("#admin-tab").hidden = !isAdmin();
+  // Add-all button visibility follows both auth state and current results
+  const addAllBtn = $("#add-all-btn");
+  if (addAllBtn) addAllBtn.hidden = !(state.episodes.length && canWrite());
 }
 
 // ---------------------------------------------------------------------------
@@ -177,6 +180,9 @@ function renderEpisodes(episodes, mode) {
   const grid = $("#episode-grid");
   grid.innerHTML = "";
   state.episodes = episodes;
+
+  const addAllBtn = $("#add-all-btn");
+  addAllBtn.hidden = !(episodes.length && canWrite());
 
   if (!episodes.length) {
     grid.appendChild(emptyState("🔭", "No episodes found. Try different filters."));
@@ -474,14 +480,26 @@ $("#pl-delete-btn").addEventListener("click", async () => {
 // ---------------------------------------------------------------------------
 // Add to playlist — picker modal
 // ---------------------------------------------------------------------------
-let _ppEpisodeId = null;
+let _ppEpisodeIds = [];
 
 function openPlaylistPicker(episodeId) {
-  _ppEpisodeId = episodeId;
+  _ppEpisodeIds = [episodeId];
   const ep = state.episodes.find((e) => e.episode_id === episodeId);
   $("#pp-episode-label").textContent = ep
     ? `S${ep.season}E${String(ep.episode_number).padStart(2, "0")} — ${ep.title}`
     : "";
+  openPlaylistPickerModal();
+}
+
+function openPlaylistPickerAll() {
+  _ppEpisodeIds = state.episodes.map((e) => e.episode_id);
+  const shown = _ppEpisodeIds.length;
+  $("#pp-episode-label").textContent =
+    `${shown} episode${shown === 1 ? "" : "s"}`;
+  openPlaylistPickerModal();
+}
+
+function openPlaylistPickerModal() {
   $("#pp-new-name").value = "";
   renderPlaylistPicker();
   $("#playlist-picker").hidden = false;
@@ -516,7 +534,7 @@ function renderPlaylistPicker() {
 
 function closePlaylistPicker() {
   $("#playlist-picker").hidden = true;
-  _ppEpisodeId = null;
+  _ppEpisodeIds = [];
 }
 
 $("#pp-close").addEventListener("click", closePlaylistPicker);
@@ -560,31 +578,50 @@ $("#pp-add-btn").addEventListener("click", async () => {
     toast("Select at least one playlist");
     return;
   }
-  if (!_ppEpisodeId) return;
+  if (!_ppEpisodeIds.length) return;
 
   const targets = checked.map((c) => ({
     id: parseInt(c.value, 10),
     name: c.dataset.name ?? `#${c.value}`,
   }));
 
-  let done = 0;
+  let added = 0;
   try {
     for (const t of targets) {
-      await api(`/playlists/${t.id}/episodes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ episode_id: _ppEpisodeId }),
-      });
-      done++;
+      for (const episodeId of _ppEpisodeIds) {
+        await api(`/playlists/${t.id}/episodes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ episode_id: episodeId }),
+        });
+        added++;
+      }
     }
-    toast(`Added to ${done} playlist${done === 1 ? "" : "s"} ✓`);
+    toast(`Added ${added} episode${added === 1 ? "" : "s"} across ${targets.length} playlist${targets.length === 1 ? "" : "s"} ✓`);
     const wasCurrent = state.currentPlaylist?.playlist_id &&
       targets.some((t) => t.id === state.currentPlaylist.playlist_id);
     closePlaylistPicker();
     if (wasCurrent) openPlaylist(state.currentPlaylist.playlist_id);
   } catch (err) {
-    toast(`Added to ${done} playlist${done === 1 ? "" : "s"}, then: ${err.message}`);
+    toast(`Added ${added}, then: ${err.message}`);
   }
+});
+
+$("#add-all-btn").addEventListener("click", () => {
+  if (!state.user) {
+    toast("Sign in to create playlists");
+    return;
+  }
+  if (!canWrite()) {
+    toast("Write access requires admin approval");
+    return;
+  }
+  if (!state.episodes.length) return;
+  if (!state.playlists.length) {
+    loadPlaylists().then(() => openPlaylistPickerAll());
+    return;
+  }
+  openPlaylistPickerAll();
 });
 
 async function promptAddToPlaylist(episodeId) {

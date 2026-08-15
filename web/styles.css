@@ -169,6 +169,12 @@ body {
 }
 .app-footer a { color: var(--accent-2); text-decoration: none; margin: 0 0.6rem; }
 
+.add-all-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.25rem;
+}
+
 
 .tab {
   background: transparent;
