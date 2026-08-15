@@ -34,6 +34,30 @@ body {
   z-index: 100;
 }
 
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.legal-links {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  font-size: 0.85rem;
+}
+
+.legal-links a {
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.15s;
+  white-space: nowrap;
+}
+
+.legal-links a:hover { color: var(--accent-2); }
+
 .brand {
   display: flex;
   align-items: center;
