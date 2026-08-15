@@ -33,11 +33,18 @@ app.use(async (ctx, next) => {
   console.log(`${ctx.request.method} ${ctx.request.url.pathname} — ${ctx.response.status} (${ms}ms)`);
 });
 
-// CORS (for local dev frontend)
+// CORS — allow only same-origin (frontend is served from this same origin).
 app.use(async (ctx, next) => {
-  ctx.response.headers.set("Access-Control-Allow-Origin", "*");
-  ctx.response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  ctx.response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  const origin = ctx.request.headers.get("origin");
+  if (origin) {
+    const host = ctx.request.headers.get("host");
+    const allowed = origin === `https://${host}` || origin === `http://${host}`;
+    if (allowed) {
+      ctx.response.headers.set("Access-Control-Allow-Origin", origin);
+      ctx.response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+      ctx.response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    }
+  }
   if (ctx.request.method === "OPTIONS") {
     ctx.response.status = 204;
     return;

@@ -30,6 +30,13 @@ const SESSION_COOKIE = "tng_session";
 const STATE_COOKIE = "tng_oauth_state";
 const SESSION_DAYS = 30;
 
+function isHttps(reqUrl: URL, headers: Headers): boolean {
+  // Caddy terminates TLS and forwards the original scheme — trust it, since
+  // the raw protocol is always http behind the reverse proxy.
+  if (headers.get("x-forwarded-proto") === "https") return true;
+  return reqUrl.protocol === "https:";
+}
+
 function getClientId(): string {
   const id = Deno.env.get("GOOGLE_CLIENT_ID");
   if (!id) throw new Error("GOOGLE_CLIENT_ID not set");
@@ -58,6 +65,30 @@ function randomToken(bytes = 32): string {
   const buf = new Uint8Array(bytes);
   crypto.getRandomValues(buf);
   return Array.from(buf, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Simple in-memory rate limiter for auth endpoints (per-IP, sliding window).
+// Prevents hammering /login and /callback. Restarts reset counters — fine.
+const authAttempts = new Map<string, number[]>();
+const AUTH_WINDOW_MS = 60_000;
+const AUTH_MAX = 30; // 30 auth requests per minute per IP
+
+function rateLimited(ip: string): boolean {
+  const now = Date.now();
+  const hits = (authAttempts.get(ip) ?? []).filter((t) => now - t < AUTH_WINDOW_MS);
+  if (hits.length >= AUTH_MAX) {
+    authAttempts.set(ip, hits);
+    return true;
+  }
+  hits.push(now);
+  authAttempts.set(ip, hits);
+  return false;
+}
+
+function clientIp(ctx: { request: { headers: Headers } }): string {
+  // Caddy sets X-Forwarded-For (trusted — only Caddy can reach the app)
+  return ctx.request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    "unknown";
 }
 
 async function sha256Hex(input: string): Promise<string> {
@@ -133,6 +164,11 @@ export function requireRole(...roles: ("reader" | "writer" | "admin")[]) {
 // ---------------------------------------------------------------------------
 
 authRouter.get("/api/auth/login", (ctx) => {
+  if (rateLimited(clientIp(ctx))) {
+    ctx.response.status = 429;
+    ctx.response.body = { success: false, error: "Too many requests" };
+    return;
+  }
   const state = randomToken(16);
   const redirectUri = getRedirectUri(ctx.request.url);
 
@@ -142,7 +178,7 @@ authRouter.get("/api/auth/login", (ctx) => {
     value: state,
     httpOnly: true,
     sameSite: "Lax",
-    secure: ctx.request.url.protocol === "https:",
+    secure: isHttps(ctx.request.url, ctx.request.headers),
     maxAge: 600,
     path: "/",
   });
@@ -165,6 +201,11 @@ authRouter.get("/api/auth/login", (ctx) => {
 // ---------------------------------------------------------------------------
 
 authRouter.get("/api/auth/callback", async (ctx) => {
+  if (rateLimited(clientIp(ctx))) {
+    ctx.response.status = 429;
+    ctx.response.body = { success: false, error: "Too many requests" };
+    return;
+  }
   const url = ctx.request.url;
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
@@ -203,7 +244,13 @@ authRouter.get("/api/auth/callback", async (ctx) => {
 
   const tokenJson = await tokenRes.json().catch(() => null);
   if (!tokenRes.ok || !tokenJson?.access_token) {
-    console.error("OAuth token exchange error:", tokenRes.status, JSON.stringify(tokenJson));
+    // Log status + error code only — NEVER the response body: it can contain
+    // an id_token JWT (embeds the user's email) and access tokens.
+    console.error(
+      "OAuth token exchange error:",
+      tokenRes.status,
+      tokenJson?.error ?? tokenJson?.error_description ?? "unknown",
+    );
     ctx.response.status = 502;
     ctx.response.body = { success: false, error: "Token exchange failed" };
     return;
@@ -258,7 +305,7 @@ authRouter.get("/api/auth/callback", async (ctx) => {
     value: token,
     httpOnly: true,
     sameSite: "Lax",
-    secure: url.protocol === "https:",
+    secure: isHttps(url, ctx.request.headers),
     maxAge: SESSION_DAYS * 24 * 60 * 60,
     path: "/",
   });
