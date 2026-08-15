@@ -114,9 +114,13 @@ function renderAuth() {
 
   document.querySelectorAll(".write-only").forEach((e) => (e.hidden = !canWrite()));
   $("#admin-tab").hidden = !isAdmin();
-  // Add-all button visibility follows both auth state and current results
+  // Add-all button visibility follows auth state, result count (≤12), and results
   const addAllBtn = $("#add-all-btn");
-  if (addAllBtn) addAllBtn.hidden = !(state.episodes.length && canWrite());
+  if (addAllBtn) {
+    addAllBtn.hidden = !(
+      state.episodes.length > 0 && state.episodes.length <= 12 && canWrite()
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -182,7 +186,8 @@ function renderEpisodes(episodes, mode) {
   state.episodes = episodes;
 
   const addAllBtn = $("#add-all-btn");
-  addAllBtn.hidden = !(episodes.length && canWrite());
+  // "Add all" is capped at 12 episodes to keep the bulk-add snappy
+  addAllBtn.hidden = !(episodes.length > 0 && episodes.length <= 12 && canWrite());
 
   if (!episodes.length) {
     grid.appendChild(emptyState("🔭", "No episodes found. Try different filters."));
