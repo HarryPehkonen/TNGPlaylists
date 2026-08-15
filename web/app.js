@@ -12,7 +12,6 @@ const state = {
   tab: "browse",
   episodes: [],
   searchMode: "",
-  characters: [],
   playlists: [],
   currentPlaylist: null,
   user: null,
@@ -130,7 +129,6 @@ document.querySelectorAll(".tab").forEach((btn) => {
     state.tab = tab;
     if (tab === "browse") loadEpisodes();
     if (tab === "playlists") loadPlaylists();
-    if (tab === "characters") loadCharacters();
     if (tab === "admin") loadUsers();
   });
 });
@@ -500,83 +498,6 @@ $("#playlist-create-btn").addEventListener("click", async () => {
 });
 
 // ---------------------------------------------------------------------------
-// Characters
-// ---------------------------------------------------------------------------
-async function loadCharacters() {
-  const list = $("#character-list");
-  const q = $("#char-search-input").value.trim();
-  list.innerHTML = "";
-  $("#loading").hidden = false;
-
-  try {
-    const params = new URLSearchParams({ limit: "500" });
-    if (q) params.set("q", q);
-    const data = await api(`/characters?${params}`);
-    state.characters = data.characters;
-
-    if (!data.characters.length) {
-      list.appendChild(emptyState("👤", "No characters found."));
-      $("#loading").hidden = true;
-      return;
-    }
-
-    data.characters.slice(0, 200).forEach((c) => {
-      const card = el("div", "character-card");
-      card.appendChild(el("div", "ch-name", c.character_name));
-      card.appendChild(el("div", "ch-stats", `${c.total_lines} lines across ${c.episode_count} episodes`));
-      card.addEventListener("click", () => openCharacterModal(c.character_name));
-      list.appendChild(card);
-    });
-  } catch (err) {
-    list.appendChild(emptyState("⚠️", err.message));
-  }
-  $("#loading").hidden = true;
-}
-
-async function openCharacterModal(name) {
-  const modal = $("#episode-modal");
-  const body = $("#modal-body");
-  body.innerHTML = "";
-  modal.hidden = false;
-
-  try {
-    const c = await api(`/characters/${encodeURIComponent(name)}`);
-    body.appendChild(el("h2", null, c.character_name));
-    body.appendChild(el("div", "modal-sub", `${c.total_lines} lines across ${c.episode_count} episodes`));
-
-    const sec = el("div", "modal-section");
-    sec.appendChild(el("h3", null, "Episodes"));
-    c.episodes.forEach((ep) => {
-      const row = el("div", "char-row");
-      const label = el("span", null, `S${ep.season}E${String(ep.episode_number).padStart(2, "0")} — ${ep.title}`);
-      row.appendChild(label);
-      row.appendChild(el("span", "lines", `${ep.line_count} lines`));
-      row.addEventListener("click", () => {
-        closeModal();
-        setTimeout(() => openEpisodeModalBySeason(ep.season, ep.episode_number), 50);
-      });
-      sec.appendChild(row);
-    });
-    body.appendChild(sec);
-  } catch (err) {
-    body.appendChild(el("p", "empty", err.message));
-  }
-}
-
-// Find episode_id from season+episode number in current state, else fetch
-async function openEpisodeModalBySeason(season, epNum) {
-  const match = state.episodes.find((e) => e.season === season && e.episode_number === epNum);
-  if (match) {
-    openEpisodeModal(match.episode_id);
-    return;
-  }
-  // Fetch by search
-  const data = await api(`/search?season=${season}`);
-  const found = data.results.find((e) => e.episode_number === epNum);
-  if (found) openEpisodeModal(found.episode_id);
-}
-
-// ---------------------------------------------------------------------------
 // Admin: user management
 // ---------------------------------------------------------------------------
 async function loadUsers() {
@@ -631,10 +552,6 @@ $("#search-btn").addEventListener("click", loadEpisodes);
 $("#search-input").addEventListener("keydown", (e) => {
   if (e.key === "Enter") loadEpisodes();
 });
-$("#char-search-input").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") loadCharacters();
-});
-$("#char-search-input").addEventListener("input", debounce(loadCharacters, 400));
 
 ["season", "character", "keyword", "category", "writer", "director"].forEach((f) => {
   $(`#filter-${f}`).addEventListener("change", () => {
@@ -651,14 +568,6 @@ $("#filter-clear").addEventListener("click", () => {
   $("#search-input").value = "";
   loadEpisodes();
 });
-
-function debounce(fn, ms) {
-  let t;
-  return (...args) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...args), ms);
-  };
-}
 
 // Preload character datalist
 (async () => {

@@ -308,30 +308,6 @@ body {
   font-size: 0.75rem;
 }
 
-/* ---------- Characters ---------- */
-.character-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.6rem;
-}
-.character-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.7rem 0.9rem;
-  cursor: pointer;
-  transition: border-color 0.12s;
-}
-.character-card:hover { border-color: var(--accent-2); }
-.character-card .ch-name {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-.character-card .ch-stats {
-  color: var(--text-dim);
-  font-size: 0.78rem;
-}
-
 /* ---------- Playlists ---------- */
 .playlist-create {
   display: flex;
