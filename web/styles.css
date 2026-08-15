@@ -471,12 +471,31 @@ body {
 
 .char-row {
   display: flex;
-  justify-content: space-between;
-  padding: 0.25rem 0;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem;
   font-size: 0.9rem;
-  border-bottom: 1px solid rgba(45,51,59,0.4);
+  border-radius: 4px;
 }
-.char-row .lines { color: var(--text-dim); font-size: 0.8rem; }
+/* Zebra striping — makes it easy to follow a row across the modal */
+.char-row:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.03);
+}
+.char-row .char-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+/* Dotted leader — faint fill between name and line count */
+.char-row .char-leader {
+  flex: 1;
+  border-bottom: 1px dotted rgba(139, 148, 158, 0.4);
+  transform: translateY(-0.25em);
+}
+.char-row .lines {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
 
 .tag-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .tag {

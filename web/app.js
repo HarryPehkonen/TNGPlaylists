@@ -192,6 +192,9 @@ function renderEpisodes(episodes, mode) {
 
     const meta = el("div", "ep-meta");
     if (ep.original_air_date) meta.appendChild(document.createTextNode(`Aired ${ep.original_air_date}`));
+    if (ep.character_lines !== undefined) {
+      meta.appendChild(document.createTextNode(` · ${ep.character_lines} lines`));
+    }
     card.appendChild(meta);
 
     if (mode === "semantic" && ep.similarity) {
@@ -235,7 +238,8 @@ async function openEpisodeModal(id) {
       sec.appendChild(el("h3", null, "Characters"));
       ep.characters.slice(0, 30).forEach((c) => {
         const row = el("div", "char-row");
-        row.appendChild(el("span", null, c.character_name));
+        row.appendChild(el("span", "char-name", c.character_name));
+        row.appendChild(el("span", "char-leader"));
         row.appendChild(el("span", "lines", `${c.line_count} lines`));
         sec.appendChild(row);
       });

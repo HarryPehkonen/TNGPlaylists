@@ -33,6 +33,8 @@ episodesRouter.get("/api/episodes", async (ctx) => {
   const joins: string[] = [];
   const values: unknown[] = [];
   let paramIdx = 1;
+  let selectExtra = "";
+  let orderBy = "e.season, e.episode_number";
 
   if (season) {
     wheres.push(`e.season = $${paramIdx++}`);
@@ -44,6 +46,9 @@ episodesRouter.get("/api/episodes", async (ctx) => {
     joins.push(`JOIN characters ch ON ch.character_id = lc.character_id`);
     wheres.push(`ch.character_name = $${paramIdx++}`);
     values.push(character.toUpperCase());
+    // Show the character's line count and sort episodes by it (most lines first)
+    selectExtra = `, lc.line_count AS character_lines`;
+    orderBy = `character_lines DESC, e.season, e.episode_number`;
   }
 
   if (keyword) {
@@ -96,10 +101,11 @@ episodesRouter.get("/api/episodes", async (ctx) => {
   const dataSql = `
     SELECT DISTINCT e.episode_id, e.season, e.episode_number, e.episode_end,
            e.title, e.site_transcript_id, e.original_air_date, e.us_viewers_millions
+           ${selectExtra}
       FROM episodes e
       ${joinSql}
       ${whereSql}
-     ORDER BY e.season, e.episode_number
+     ORDER BY ${orderBy}
      LIMIT $${paramIdx++} OFFSET $${paramIdx++}
   `;
   const dataRes = await queryObject(dataSql, [...values, limit, offset]);
