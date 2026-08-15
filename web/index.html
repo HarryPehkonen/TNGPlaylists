@@ -87,7 +87,13 @@
     </section>
     <section id="playlist-list" class="playlist-list"></section>
     <section id="playlist-detail" class="playlist-detail" hidden>
-      <h2 id="playlist-detail-title"></h2>
+      <div class="pl-detail-header">
+        <h2 id="playlist-detail-title"></h2>
+        <div class="pl-detail-actions write-only">
+          <button id="pl-rename-btn" class="btn btn-ghost btn-sm">✏️ Rename</button>
+          <button id="pl-delete-btn" class="btn btn-danger btn-sm">🗑 Delete</button>
+        </div>
+      </div>
       <div id="playlist-detail-episodes" class="episode-grid"></div>
     </section>
   </main>

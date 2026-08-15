@@ -308,6 +308,33 @@ body {
   font-size: 0.75rem;
 }
 
+/* Remove button on playlist-detail episode cards */
+.episode-card {
+  position: relative;
+}
+.ep-remove {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  border-radius: 50%;
+  background: rgba(248, 81, 73, 0.15);
+  color: var(--danger);
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.ep-remove:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
 /* ---------- Playlists ---------- */
 .playlist-create {
   display: flex;
@@ -356,6 +383,32 @@ body {
 }
 
 .playlist-detail { margin-top: 1.5rem; }
+.pl-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+.pl-detail-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.btn-danger {
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  cursor: pointer;
+  border-radius: var(--radius);
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  transition: background 0.12s, color 0.12s;
+}
+.btn-danger:hover {
+  background: var(--danger);
+  color: #fff;
+}
 .playlist-detail h2 {
   font-size: 1.2rem;
   margin-bottom: 0.9rem;

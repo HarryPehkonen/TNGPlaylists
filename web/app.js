@@ -395,6 +395,7 @@ async function openPlaylist(id) {
     const detail = $("#playlist-detail");
     detail.hidden = false;
     $("#playlist-detail-title").textContent = p.name;
+    document.querySelectorAll(".pl-detail-actions").forEach((e) => (e.hidden = !canWrite()));
     const grid = $("#playlist-detail-episodes");
     grid.innerHTML = "";
     if (!p.episodes.length) {
@@ -405,6 +406,15 @@ async function openPlaylist(id) {
       const card = el("div", "episode-card");
       card.appendChild(el("span", "ep-badge", `S${ep.season}E${String(ep.episode_number).padStart(2, "0")}`));
       card.appendChild(el("div", "ep-title", ep.title));
+      if (canWrite()) {
+        const rm = el("button", "ep-remove", "✕");
+        rm.title = "Remove from playlist";
+        rm.addEventListener("click", (e) => {
+          e.stopPropagation();
+          removeEpisodeFromPlaylist(id, ep.episode_id);
+        });
+        card.appendChild(rm);
+      }
       card.addEventListener("click", () => openEpisodeModal(ep.episode_id));
       grid.appendChild(card);
     });
@@ -412,6 +422,50 @@ async function openPlaylist(id) {
     toast(err.message);
   }
 }
+
+async function removeEpisodeFromPlaylist(playlistId, episodeId) {
+  try {
+    await api(`/playlists/${playlistId}/episodes/${episodeId}`, { method: "DELETE" });
+    toast("Removed from playlist ✓");
+    openPlaylist(playlistId);
+  } catch (err) {
+    toast(err.message);
+  }
+}
+
+$("#pl-rename-btn").addEventListener("click", async () => {
+  const p = state.currentPlaylist;
+  if (!p) return;
+  const name = prompt("Rename playlist:", p.name);
+  if (!name || !name.trim() || name.trim() === p.name) return;
+  try {
+    await api(`/playlists/${p.playlist_id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim() }),
+    });
+    toast(`Renamed to "${name.trim()}" ✓`);
+    loadPlaylists();
+    openPlaylist(p.playlist_id);
+  } catch (err) {
+    toast(err.message);
+  }
+});
+
+$("#pl-delete-btn").addEventListener("click", async () => {
+  const p = state.currentPlaylist;
+  if (!p) return;
+  if (!confirm(`Delete playlist "${p.name}"? This cannot be undone.`)) return;
+  try {
+    await api(`/playlists/${p.playlist_id}`, { method: "DELETE" });
+    state.currentPlaylist = null;
+    $("#playlist-detail").hidden = true;
+    toast(`Deleted "${p.name}" ✓`);
+    loadPlaylists();
+  } catch (err) {
+    toast(err.message);
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Add to playlist — picker modal
