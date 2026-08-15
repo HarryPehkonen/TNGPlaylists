@@ -133,7 +133,7 @@ searchRouter.get("/api/search", async (ctx) => {
         WITH filtered AS (
           ${baseSelect}
         )
-        SELECT f.season, f.episode_number, f.title, f.site_transcript_id,
+        SELECT f.episode_id, f.season, f.episode_number, f.title, f.site_transcript_id,
                f.original_air_date,
                1 - (ee.embedding <=> $${p}::vector) AS similarity
           FROM filtered f
@@ -159,7 +159,7 @@ searchRouter.get("/api/search", async (ctx) => {
       WITH filtered AS (
         ${baseSelect}
       )
-      SELECT f.season, f.episode_number, f.title, f.site_transcript_id,
+      SELECT f.episode_id, f.season, f.episode_number, f.title, f.site_transcript_id,
              f.original_air_date
         FROM filtered f
         LEFT JOIN episode_summaries es ON es.episode_id = f.episode_id
