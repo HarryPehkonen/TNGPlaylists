@@ -413,6 +413,122 @@ async function openPlaylist(id) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Add to playlist — picker modal
+// ---------------------------------------------------------------------------
+let _ppEpisodeId = null;
+
+function openPlaylistPicker(episodeId) {
+  _ppEpisodeId = episodeId;
+  const ep = state.episodes.find((e) => e.episode_id === episodeId);
+  $("#pp-episode-label").textContent = ep
+    ? `S${ep.season}E${String(ep.episode_number).padStart(2, "0")} — ${ep.title}`
+    : "";
+  $("#pp-new-name").value = "";
+  renderPlaylistPicker();
+  $("#playlist-picker").hidden = false;
+  // Autofocus the new-playlist field when the list is empty
+  if (!state.playlists.length) $("#pp-new-name").focus();
+}
+
+function renderPlaylistPicker() {
+  const list = $("#pp-list");
+  list.innerHTML = "";
+
+  if (!state.playlists.length) {
+    list.appendChild(el("div", "pp-empty", "No playlists yet — create one below."));
+    return;
+  }
+
+  state.playlists.forEach((p) => {
+    const label = el("label", "pp-item");
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.value = p.playlist_id;
+    cb.dataset.name = p.name;
+    label.appendChild(cb);
+    label.appendChild(el("span", null, p.name));
+    if (p.episode_count !== undefined) {
+      label.appendChild(el("span", "pp-count",
+        `${p.episode_count} ep${p.episode_count === 1 ? "" : "s"}`));
+    }
+    list.appendChild(label);
+  });
+}
+
+function closePlaylistPicker() {
+  $("#playlist-picker").hidden = true;
+  _ppEpisodeId = null;
+}
+
+$("#pp-close").addEventListener("click", closePlaylistPicker);
+$("#pp-cancel-btn").addEventListener("click", closePlaylistPicker);
+$("#playlist-picker").addEventListener("click", (e) => {
+  if (e.target === $("#playlist-picker")) closePlaylistPicker();
+});
+
+$("#pp-create-btn").addEventListener("click", async () => {
+  const name = $("#pp-new-name").value.trim();
+  if (!name) {
+    toast("Playlist needs a name");
+    return;
+  }
+  try {
+    const created = await api("/playlists", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, description: "", is_smart: false }),
+    });
+    $("#pp-new-name").value = "";
+    await loadPlaylists();
+    renderPlaylistPicker();
+    // Auto-check the freshly created playlist so it's ready to receive the episode
+    const cb = [...document.querySelectorAll("#pp-list input[type=checkbox]")]
+      .find((c) => c.value === String(created.playlist_id));
+    if (cb) cb.checked = true;
+    toast(`Created "${created.name}" ✓`);
+  } catch (err) {
+    toast(err.message);
+  }
+});
+
+$("#pp-new-name").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") $("#pp-create-btn").click();
+});
+
+$("#pp-add-btn").addEventListener("click", async () => {
+  const checked = [...document.querySelectorAll("#pp-list input[type=checkbox]:checked")];
+  if (!checked.length) {
+    toast("Select at least one playlist");
+    return;
+  }
+  if (!_ppEpisodeId) return;
+
+  const targets = checked.map((c) => ({
+    id: parseInt(c.value, 10),
+    name: c.dataset.name ?? `#${c.value}`,
+  }));
+
+  let done = 0;
+  try {
+    for (const t of targets) {
+      await api(`/playlists/${t.id}/episodes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ episode_id: _ppEpisodeId }),
+      });
+      done++;
+    }
+    toast(`Added to ${done} playlist${done === 1 ? "" : "s"} ✓`);
+    const wasCurrent = state.currentPlaylist?.playlist_id &&
+      targets.some((t) => t.id === state.currentPlaylist.playlist_id);
+    closePlaylistPicker();
+    if (wasCurrent) openPlaylist(state.currentPlaylist.playlist_id);
+  } catch (err) {
+    toast(`Added to ${done} playlist${done === 1 ? "" : "s"}, then: ${err.message}`);
+  }
+});
+
 async function promptAddToPlaylist(episodeId) {
   if (!state.user) {
     toast("Sign in to create playlists");
@@ -425,53 +541,7 @@ async function promptAddToPlaylist(episodeId) {
   if (!state.playlists.length) {
     await loadPlaylists();
   }
-  if (!state.playlists.length) {
-    const name = prompt(
-      "No playlists yet. Create one to add this episode:\nEnter a playlist name:",
-    );
-    if (!name || !name.trim()) return;
-    try {
-      const created = await api("/playlists", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), description: "", is_smart: false }),
-      });
-      await api(`/playlists/${created.playlist_id}/episodes`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ episode_id: episodeId }),
-      });
-      state.playlists.push(created);
-      toast(`Created "${created.name}" and added episode ✓`);
-      return;
-    } catch (err) {
-      toast(err.message);
-      return;
-    }
-  }
-
-  const names = state.playlists.map((p) => p.name);
-  const pick = prompt(`Add to playlist:\n${names.map((n, i) => `${i + 1}. ${n}`).join("\n")}`);
-  if (!pick) return;
-  const idx = parseInt(pick, 10) - 1;
-  if (isNaN(idx) || idx < 0 || idx >= state.playlists.length) {
-    toast("Invalid selection");
-    return;
-  }
-
-  try {
-    await api(`/playlists/${state.playlists[idx].playlist_id}/episodes`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ episode_id: episodeId }),
-    });
-    toast(`Added to "${state.playlists[idx].name}" ✓`);
-    if (state.currentPlaylist?.playlist_id === state.playlists[idx].playlist_id) {
-      openPlaylist(state.playlists[idx].playlist_id);
-    }
-  } catch (err) {
-    toast(err.message);
-  }
+  openPlaylistPicker(episodeId);
 }
 
 // Playlist creation

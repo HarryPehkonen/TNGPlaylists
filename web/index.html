@@ -107,6 +107,27 @@
     </div>
   </div>
 
+  <!-- Add-to-playlist picker modal -->
+  <div id="playlist-picker" class="modal" hidden>
+    <div class="modal-content pp-modal-content">
+      <button class="modal-close" id="pp-close">✕</button>
+      <h2>Add to playlists</h2>
+      <p class="modal-sub" id="pp-episode-label"></p>
+
+      <div id="pp-list" class="pp-list"></div>
+
+      <div class="pp-create">
+        <input type="text" id="pp-new-name" placeholder="New playlist name…" autocomplete="off">
+        <button id="pp-create-btn" class="btn btn-ghost btn-sm">Create</button>
+      </div>
+
+      <div class="modal-actions">
+        <button id="pp-add-btn" class="btn btn-primary">Add to selected</button>
+        <button id="pp-cancel-btn" class="btn btn-ghost">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div id="toast" class="toast" hidden></div>
 
