@@ -355,8 +355,28 @@ async function promptAddToPlaylist(episodeId) {
     await loadPlaylists();
   }
   if (!state.playlists.length) {
-    toast("Create a playlist first (Playlists tab)");
-    return;
+    const name = prompt(
+      "No playlists yet. Create one to add this episode:\nEnter a playlist name:",
+    );
+    if (!name || !name.trim()) return;
+    try {
+      const created = await api("/playlists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), description: "", is_smart: false }),
+      });
+      await api(`/playlists/${created.playlist_id}/episodes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ episode_id: episodeId }),
+      });
+      state.playlists.push(created);
+      toast(`Created "${created.name}" and added episode ✓`);
+      return;
+    } catch (err) {
+      toast(err.message);
+      return;
+    }
   }
 
   const names = state.playlists.map((p) => p.name);
