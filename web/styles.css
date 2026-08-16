@@ -420,6 +420,14 @@ body {
   color: var(--text);
 }
 
+.playlist-detail .pl-detail-desc {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  font-style: italic;
+  margin: 0.15rem 0 0.75rem;
+  line-height: 1.4;
+}
+
 .playlist-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -435,6 +443,13 @@ body {
 }
 .playlist-card:hover { border-color: var(--accent); }
 .playlist-card .pl-name { font-weight: 600; }
+.playlist-card .pl-desc {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  font-style: italic;
+  margin-top: 0.25rem;
+  line-height: 1.35;
+}
 .playlist-card .pl-meta {
   color: var(--text-dim);
   font-size: 0.8rem;

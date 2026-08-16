@@ -503,6 +503,7 @@ async function loadPlaylists() {
       const card = el("div", "playlist-card");
       card.appendChild(el("div", "pl-name", p.name));
       if (p.is_smart) card.appendChild(el("div", "pl-smart", "⚡ smart"));
+      if (p.description) card.appendChild(el("div", "pl-desc", p.description));
       card.appendChild(el("div", "pl-meta", `${p.episode_count} episode(s)`));
       card.addEventListener("click", () => openPlaylist(p.playlist_id));
       list.appendChild(card);
@@ -519,6 +520,9 @@ async function openPlaylist(id) {
     const detail = $("#playlist-detail");
     detail.hidden = false;
     $("#playlist-detail-title").textContent = p.name;
+    const descEl = $("#playlist-detail-desc");
+    descEl.textContent = p.description || "";
+    descEl.hidden = !p.description;
     document.querySelectorAll(".pl-detail-actions").forEach((e) => (e.hidden = !canWrite()));
     const grid = $("#playlist-detail-episodes");
     grid.innerHTML = "";
@@ -575,6 +579,27 @@ $("#pl-rename-btn").addEventListener("click", async () => {
       body: JSON.stringify({ name: name.trim() }),
     });
     toast(`Renamed to "${name.trim()}" ✓`);
+    loadPlaylists();
+    openPlaylist(p.playlist_id);
+  } catch (err) {
+    toast(err.message);
+  }
+});
+
+$("#pl-desc-btn").addEventListener("click", async () => {
+  const p = state.currentPlaylist;
+  if (!p) return;
+  const desc = prompt("Playlist description:", p.description || "");
+  if (desc === null) return; // cancelled
+  const trimmed = desc.trim();
+  if (trimmed === (p.description || "")) return; // unchanged
+  try {
+    await api(`/playlists/${p.playlist_id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description: trimmed }),
+    });
+    toast(trimmed ? "Description saved ✓" : "Description removed");
     loadPlaylists();
     openPlaylist(p.playlist_id);
   } catch (err) {
