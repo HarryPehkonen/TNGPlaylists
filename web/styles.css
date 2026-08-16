@@ -173,6 +173,23 @@ body {
 .legal-content a { color: var(--accent-2); }
 .legal-updated { font-size: 0.85rem; color: var(--text-dim); }
 
+/* Account actions on static pages (privacy.html) */
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+.account-actions .btn-danger { padding: 0.5rem 1rem; }
+.account-actions-status {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin: 0;
+}
+.account-actions-status.error { color: var(--danger); }
+
 .app-footer {
   text-align: center;
   padding: 1.25rem;
@@ -354,39 +371,34 @@ body {
   color: #fff;
 }
 
-/* Watched toggle — present on BOTH browse and playlist-detail cards */
+/* Watched toggle — present on BOTH browse and playlist-detail cards.
+   A visible labeled pill; the original bare ✓ at 50% opacity read as a
+   decorative badge, not a button (discoverability fix, Aug 2026). */
 .ep-watched {
-  position: absolute;
-  top: 0.35rem;
-  right: 0.35rem;
-  width: 1.5rem;
-  height: 1.5rem;
+  margin-top: auto; /* push to the card bottom */
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
   border: 1px solid var(--border);
-  border-radius: 50%;
+  border-radius: 999px;
   background: transparent;
   color: var(--text-dim);
-  font-size: 0.8rem;
-  line-height: 1;
+  font-size: 0.75rem;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.5;
-  transition: opacity 0.12s, background 0.12s, color 0.12s;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 .ep-watched:hover {
-  opacity: 1;
   color: var(--text);
   border-color: var(--accent-2);
 }
 .ep-watched.on {
-  opacity: 1;
   background: var(--accent-2);
   border-color: var(--accent-2);
   color: #000;
 }
-/* Playlist-detail cards also carry a remove button — sit beside it, not on it */
-.ep-remove ~ .ep-watched { right: 2.1rem; }
+.ep-watched-icon { font-size: 0.8rem; }
 
 .episode-card.watched { border-color: rgba(77, 159, 255, 0.45); }
 .episode-card.watched .ep-title { color: var(--text-dim); }

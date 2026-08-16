@@ -3,6 +3,8 @@
  * Vanilla JS (no framework), mirrors the Notes app's no-build philosophy.
  */
 
+import { clearLocalDataLink } from "./account-actions.js";
+
 const API_BASE = "/api";
 
 // Guests keep their watched list here (JSON array of episode ids). Signed-in
@@ -94,7 +96,13 @@ function renderAuth() {
     const btn = el("a", "btn btn-ghost btn-sm", "Sign in with Google");
     btn.href = "/api/auth/login";
     area.appendChild(btn);
-    area.appendChild(clearLocalDataLink());
+    const cl = clearLocalDataLink();
+    cl.addEventListener("cleared", () => {
+      state.watched = new Set();
+      renderWatchedMarks();
+      toast("Local data cleared");
+    });
+    area.appendChild(cl);
     document.querySelectorAll(".write-only").forEach((e) => (e.hidden = true));
     $("#admin-tab").hidden = true;
     return;
@@ -122,7 +130,6 @@ function renderAuth() {
     loadEpisodes();
   });
   area.appendChild(logout);
-  area.appendChild(deleteAccountButton());
 
   document.querySelectorAll(".write-only").forEach((e) => (e.hidden = !canWrite()));
   $("#admin-tab").hidden = !isAdmin();
@@ -198,11 +205,16 @@ async function toggleWatched(episodeId) {
 }
 
 /**
- * Build the ✓ toggle for an episode card. Used by BOTH card builders — the
- * browse grid and the playlist detail grid — so keep those two in sync.
+ * Build the watched toggle for an episode card — a visible labeled pill so
+ * the affordance is obvious (the original bare ✓ at 50% opacity read as a
+ * decorative badge, not a button). Used by BOTH card builders — the browse
+ * grid and the playlist detail grid — so keep those two in sync.
  */
 function watchedToggle(episodeId) {
-  const btn = el("button", "ep-watched", "✓");
+  const btn = el("button", "ep-watched");
+  btn.type = "button";
+  btn.appendChild(el("span", "ep-watched-icon", "✓"));
+  btn.appendChild(el("span", "ep-watched-label", "Mark watched"));
   btn.addEventListener("click", (e) => {
     e.stopPropagation(); // must not open the episode modal
     toggleWatched(episodeId);
@@ -220,65 +232,9 @@ function renderWatchedMarks() {
     btn.classList.toggle("on", on);
     btn.setAttribute("aria-pressed", String(on));
     btn.title = on ? "Watched — click to unmark" : "Mark as watched";
+    const label = btn.querySelector(".ep-watched-label");
+    if (label) label.textContent = on ? "Watched" : "Mark watched";
   });
-}
-
-// ---------------------------------------------------------------------------
-// Account actions — delete account (signed in) / clear local data (guest)
-// ---------------------------------------------------------------------------
-
-/** Drop every tngplaylists.* key this site stores in the browser. */
-function clearLocalData() {
-  Object.keys(localStorage)
-    .filter((k) => k.startsWith("tngplaylists."))
-    .forEach((k) => localStorage.removeItem(k));
-}
-
-function clearLocalDataLink() {
-  const link = el("button", "link-quiet", "Clear my local data");
-  link.title = "Remove the watched list stored in this browser";
-  link.addEventListener("click", () => {
-    if (!confirm(
-      "Clear the data this site keeps in your browser (your watched-episode " +
-      "list)?\n\nNothing is sent to the server — this only affects this " +
-      "browser, and cannot be undone.",
-    )) return;
-    clearLocalData();
-    state.watched = new Set();
-    renderWatchedMarks();
-    toast("Local data cleared");
-  });
-  return link;
-}
-
-function deleteAccountButton() {
-  const btn = el("button", "btn btn-danger btn-sm", "Delete account");
-  btn.addEventListener("click", async () => {
-    if (!confirm(
-      "Permanently delete your TNG Playlists account?\n\n" +
-      "This removes your account, your sign-in sessions and your watched " +
-      "episodes from our server, and clears the data this site keeps in your " +
-      "browser. Playlists stay on the site (they are shared content), and " +
-      "your Google account is not affected.\n\nThis cannot be undone.",
-    )) return;
-
-    try {
-      await api("/auth/me", { method: "DELETE" });
-    } catch (err) {
-      // e.g. 409 "Cannot delete the last admin account" — stay signed in.
-      toast(err.message);
-      return;
-    }
-
-    clearLocalData();
-    state.user = null;
-    state.watched = new Set();
-    renderAuth();
-    renderWatchedMarks();
-    loadEpisodes();
-    toast("Account deleted");
-  });
-  return btn;
 }
 
 // ---------------------------------------------------------------------------
