@@ -3,8 +3,6 @@
  * Vanilla JS (no framework), mirrors the Notes app's no-build philosophy.
  */
 
-import { clearLocalDataLink } from "./account-actions.js";
-
 const API_BASE = "/api";
 
 // Guests keep their watched list here (JSON array of episode ids). Signed-in
@@ -96,13 +94,6 @@ function renderAuth() {
     const btn = el("a", "btn btn-ghost btn-sm", "Sign in with Google");
     btn.href = "/api/auth/login";
     area.appendChild(btn);
-    const cl = clearLocalDataLink();
-    cl.addEventListener("cleared", () => {
-      state.watched = new Set();
-      renderWatchedMarks();
-      toast("Local data cleared");
-    });
-    area.appendChild(cl);
     document.querySelectorAll(".write-only").forEach((e) => (e.hidden = true));
     $("#admin-tab").hidden = true;
     return;
@@ -545,6 +536,7 @@ async function openPlaylist(id) {
         rm.title = "Remove from playlist";
         rm.addEventListener("click", (e) => {
           e.stopPropagation();
+          if (!confirm(`Remove "${ep.title}" from this playlist?`)) return;
           removeEpisodeFromPlaylist(id, ep.episode_id);
         });
         card.appendChild(rm);
