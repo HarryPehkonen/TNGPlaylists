@@ -668,11 +668,18 @@ function renderPlaylistPicker() {
     cb.value = p.playlist_id;
     cb.dataset.name = p.name;
     label.appendChild(cb);
-    label.appendChild(el("span", null, p.name));
+    const text = el("span", "pp-text");
+    const row = el("span", "pp-row");
+    row.appendChild(el("span", "pp-name", p.name));
     if (p.episode_count !== undefined) {
-      label.appendChild(el("span", "pp-count",
+      row.appendChild(el("span", "pp-count",
         `${p.episode_count} ep${p.episode_count === 1 ? "" : "s"}`));
     }
+    text.appendChild(row);
+    if (p.description) {
+      text.appendChild(el("span", "pp-desc", p.description));
+    }
+    label.appendChild(text);
     list.appendChild(label);
   });
 }
