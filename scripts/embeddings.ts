@@ -8,7 +8,7 @@
  *
  * Usage:
  *   EMBEDDINGS_BASE_URL=http://127.0.0.1:8645/v1 \
- *   DATABASE_URL=postgres://tng_user:PASS@localhost:5434/tngplaylists \
+ *   DATABASE_URL=postgres://tng_user:***@localhost:5432/tngplaylists \
  *   deno run --allow-read --allow-write --allow-net --allow-env scripts/embeddings.ts
  */
 

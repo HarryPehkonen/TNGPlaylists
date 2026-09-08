@@ -15,7 +15,7 @@ export function getDbConfig(): DbConfig {
   const url = Deno.env.get("DATABASE_URL");
   if (!url) {
     throw new Error(
-      "DATABASE_URL not set — e.g. postgres://tng_user:PASS@localhost:5434/tngplaylists",
+      "DATABASE_URL not set — e.g. postgres://tng_user:***@localhost:5432/tngplaylists",
     );
   }
   return { url };
