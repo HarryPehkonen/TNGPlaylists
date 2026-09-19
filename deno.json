@@ -1,5 +1,8 @@
 {
   "tasks": {
+    "lint": "deno lint",
+    "test": "deno test --allow-read --allow-env --allow-net --allow-run=deno tests/",
+    "fmt": "deno fmt",
     "start": "deno run --allow-net --allow-read --allow-env --allow-write api/main.ts",
     "seed": "deno run --allow-read --allow-write --allow-net --allow-env --allow-ffi scripts/seed.ts",
     "embeddings": "deno run --allow-read --allow-write --allow-net --allow-env scripts/embeddings.ts",

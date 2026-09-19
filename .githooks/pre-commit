@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+#
+# pre-commit: the FAST tier.
+#
+# from AI-DEV-STARTER (plunk-in kit) — if you edit this file, say why in INCIDENTS.md.
+# Install as .githooks/pre-commit and arm it once per clone:
+#
+#     git config core.hooksPath .githooks
+#
+# Nothing leaves the machine to make this work: no GitHub, no service, no account.
+# It is the same gate a human runs by hand and the nightly clean checkout runs.
+#
+# For Deno the whole gate is already seconds (lint, the contract suite, format on
+# the touched files, the artifact-identity pair), so commit runs all of it and a
+# broken commit never leaves the machine.
+#
+# Deliberate bypass when you need one:  git commit --no-verify
+#
+set -uo pipefail
+
+root=$(git rev-parse --show-toplevel) || exit 1
+
+if [ -x "$root/tools/ci.sh" ]; then
+    exec "$root/tools/ci.sh" build tests
+fi
+
+if [ -x "$root/scripts/gate.sh" ]; then
+    exec "$root/scripts/gate.sh"
+fi
+
+# No gate found is a failure, not a warning: a silently unarmed gate is worse than
+# no gate, because it looks armed.
+printf 'pre-commit: no gate found. Expected %s/tools/ci.sh (C++) or %s/scripts/gate.sh (deno/python).\n' \
+    "$root" "$root" >&2
+exit 1
