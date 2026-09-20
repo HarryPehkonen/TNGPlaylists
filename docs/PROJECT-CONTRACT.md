@@ -1,16 +1,17 @@
 # TNGPlaylists — the contract for whoever (or whatever) works in this repo
 
 <!--
-WHY THIS FILE IS NOT NAMED CLAUDE.md YET: this repo's CLAUDE.md is one of the
-protected agent-instruction files — creating it opens an approval prompt, and the
-baseline change that wrote this file ran without a human at the keyboard, so the
-prompt timed out and the write was refused (correctly). The content is complete;
-only the name is pending. To activate it, a human runs:
+WHY THIS FILE IS NOT NAMED CLAUDE.md: this repo's CLAUDE.md is a protected
+agent-instruction file — creating it opens an approval prompt, and the two
+unattended attempts to install this document (2026-09-19, and 2026-09-20 from card
+t_b7a6fa85) both timed out and were refused. The content is complete; only the name
+is pending. To activate it, a human runs:
 
     git mv docs/PROJECT-CONTRACT.md CLAUDE.md
 
 and approves the prompt. Until then this file is the same contract, one directory
 further away — better than a missing document, and honest about which half is done.
+Do not have an agent "fix" the name by hand: the refusal is the guard working.
 -->
 
 ## What this is
@@ -24,18 +25,18 @@ Admin, plus the episode modal) do what they say against a seeded database.
 
 ## Commands
 
-| What                                               | Command                                                                                                                |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Dependencies                                       | none to install — Deno fetches `jsr:@oak/oak` / `jsr:@db/postgres` on first run and pins them in `deno.lock`           |
-| **Run the gate (before you claim anything works)** | `scripts/gate.sh`                                                                                                      |
-| Tests only                                         | `deno task test`                                                                                                       |
-| Tests including the live HTTP check                | `DATABASE_URL=postgres://tng_user:***@localhost:5432/tngplaylists deno task test`                                      |
-| Lint only                                          | `deno task lint`                                                                                                       |
-| Format the files you touched                       | `deno fmt <files>`                                                                                                     |
-| Run it locally                                     | `deno task pg:start` then `DATABASE_URL=postgres://tng_user:***@localhost:5432/tngplaylists PORT=8090 deno task start` |
-| Local Postgres (systemd cluster on 5432)           | `deno task pg:start` / `pg:stop` / `pg:status`                                                                         |
-| Seed / re-embed / search from the CLI              | `deno task seed` / `deno task embeddings` / `deno task search "query"`                                                 |
-| Deploy                                             | not in this repo — the VPS steps live in the `vps-deno-app-deployment` skill (see "Gaps" below)                        |
+| What                                               | Command                                                                                                                                                                          |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dependencies                                       | none to install — every `jsr:` import pins its own version in the source (`@oak/oak@17.2.0`, `@db/postgres@0.19.5`, `@db/sqlite@0.13.0`), and `deno.lock` resolves exactly those |
+| **Run the gate (before you claim anything works)** | `scripts/gate.sh`                                                                                                                                                                |
+| Tests only                                         | `deno task test`                                                                                                                                                                 |
+| Tests including the live HTTP check                | `DATABASE_URL=postgres://tng_user:***@localhost:5432/tngplaylists deno task test`                                                                                                |
+| Lint only                                          | `deno task lint`                                                                                                                                                                 |
+| Format the files you touched                       | `deno fmt <files>`                                                                                                                                                               |
+| Run it locally                                     | `deno task pg:start` then `DATABASE_URL=postgres://tng_user:***@localhost:5432/tngplaylists PORT=8090 deno task start`                                                           |
+| Local Postgres (systemd cluster on 5432)           | `deno task pg:start` / `pg:stop` / `pg:status`                                                                                                                                   |
+| Seed / re-embed / search from the CLI              | `deno task seed` / `deno task embeddings` / `deno task search "query"`                                                                                                           |
+| Deploy                                             | not in this repo — the VPS steps live in the `vps-deno-app-deployment` skill (see "Gaps" below)                                                                                  |
 
 The gate's last line is the verdict: `GATE PASSED` or `GATE FAILED`. Never report work as done on a
 run that did not print `GATE PASSED`. If a stage says it skipped something (today: the live HTTP
@@ -65,14 +66,17 @@ check, when `DATABASE_URL` is unset), say so explicitly — a skipped check is n
 
 ## Invariants
 
-- **The build number, in two copies.** `web/version.js` `APP_VERSION` must equal every `?v=` on the
-  asset references in `web/*.html` (today: `/styles.css` and `/app.js` in `web/index.html`).
-  Enforced by the artifact-identity stage of `scripts/gate.sh` and by
-  `tests/deno/app_version_test.ts`. The gate also fails when anything under `web/` changes without
-  `web/version.js` changing. To bump: edit `web/version.js` **and** the `?v=` values in
-  `web/index.html` in the same commit. `web/version.js` is the copy a human reads; the `?v=` is the
-  copy the browser caches under (Oak's `send()` ignores the query string, so the bytes served are
-  identical).
+- **The build number, in two copies.** `web/version.js` `APP_VERSION` must equal the `?v=` on
+  **every local asset reference** (a `/`-rooted `.css` or `.js`) in **every page** under `web/` —
+  the entry point and the four static pages alike. Enforced by the artifact-identity stage of
+  `scripts/gate.sh` and by `tests/deno/app_version_test.ts`; the gate also fails when anything under
+  `web/` changes without `web/version.js` changing. To bump: edit `web/version.js` **and** every
+  `?v=` in the same commit. `web/version.js` is the copy a human reads; the `?v=` is the copy the
+  browser caches under (Oak's `send()` ignores the query string, so the bytes served are identical).
+  A new page that loads an asset bare fails the check — that is the point.
+- **Lint is absolute.** `deno task lint` must report zero problems on the whole tree; there is no
+  baseline and no "pre-existing" allowance. Imports are pinned to exact versions so the verdict is a
+  property of the code, not of the calendar.
 - **The response envelope.** Every route answers with an object carrying `success`; `success: true`
   carries `data`, `success: false` carries an `error` message; a route with no body follows a 204.
   Enforced by `tests/deno/envelope_test.ts` and, over HTTP, by `tests/deno/api_live_test.ts`.
@@ -103,12 +107,18 @@ check, when `DATABASE_URL` is unset), say so explicitly — a skipped check is n
 
 <!-- APPEND-ONLY. One line each, newest first, and each one is a real incident. -->
 
-- The tree arrived with **21 pre-existing lint problems in 13 files**. The gate's lint stage is a
-  ratchet: it lints the whole tree but fails only on a violation a file did not already have at
-  `HEAD`, so touching `api/auth.ts` for an unrelated reason is not a lint pass-or-fail event. Fix a
-  file's problems and its next violation is caught — do not silence the rules to shrink the number.
-- `web/*.html` arrived **unformatted** (`deno fmt` wants to reindent all five pages). The format
-  stage tolerates drift that was already at `HEAD` and fails only on drift the change introduced.
+- The tree arrived with **21 lint problems in 13 files**. They were cleared on 2026-09-20 and the
+  ratchet that excused them was deleted in the same commit: `deno task lint` is now absolute, so one
+  new problem anywhere fails the gate. The backlog was 13 unpinned `jsr:` imports (now pinned to the
+  exact versions in `deno.lock`), 5 unused symbols, 2 `any`s, 1 `let`. Do not silence a rule to
+  shrink a number — `deno.json`'s `lint.rules.tags` is the one place the rule set is chosen, and
+  changing it is a decision, not a cleanup.
+- **15 of 36 files arrived unformatted** (all five pages, `web/app.js`, `web/account-actions.js`,
+  `web/styles.css`, `README.md`, `api/{auth,main,playlists}.ts`,
+  `scripts/{seed,search,embeddings}.ts`). The format stage tolerates drift that was already at
+  `HEAD` and fails only on drift the change introduced, which is why editing one of them does not
+  force a whole-file reformat. Reformatting the tree is a commit of its own, never a side effect of
+  a fix.
 - The two client files disagree about URL shape on purpose: `web/app.js` composes relative paths
   onto `API_BASE` via `api()`, `web/account-actions.js` calls `fetch("/api/auth/me")` with the
   prefix already in the string. The contract test keys off the **call shape**, so both are checked,
@@ -147,18 +157,19 @@ check, when `DATABASE_URL` is unset), say so explicitly — a skipped check is n
 - Do not add a route without adding the client call (or vice versa) in the same change — the
   contract test is what makes that safe, not a review habit.
 - Do not introduce a service worker without wiring the artifact-identity pair to its cache name;
-  today the `?v=` on `web/index.html` is the whole cache story.
-- Do not change `web/index.html`'s asset references without bumping `web/version.js`, and do not
-  reformat `web/*.html` unless you mean to (the format stage stops tolerating it for that file once
-  you do).
+  today the `?v=` on each page's assets is the whole cache story.
+- Do not change any page's asset references without bumping `web/version.js`, and do not reformat
+  `web/*.html` unless you mean to (the format stage stops tolerating it for that file once you do).
 
 ## Gaps
 
 - `README.md` is two lines and there is no in-repo deploy doc; the VPS deploy (Deno + Postgres over
   SSH) is covered by the `vps-deno-app-deployment` skill.
-- Four static pages (`about`, `privacy`, `terms`, `copyright`) load `/styles.css` and `/email.js`
-  **unversioned**, so a stylesheet change can serve stale CSS there. Versioning them means
-  reformatting four HTML files that arrived unformatted — a deliberate follow-up, not an oversight.
+- `deno check` is **not** part of the gate, and it reports 2 pre-existing type errors in
+  `scripts/embeddings.ts` (`unknown[]` where `(string | number | null)[]` is expected; `e.message`
+  on an `unknown`). `api/main.ts`, `scripts/seed.ts` and `scripts/search.ts` check clean. Those two
+  are what a `types` stage would have to fix first — deliberately left alone here, because the fix
+  is a decision about the row type, not a typo.
 
 ## Incidents
 

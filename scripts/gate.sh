@@ -18,16 +18,17 @@
 # It reports EVERY failure rather than stopping at the first, so one run tells
 # you everything that is wrong.
 #
-# Adapted from AI-DEV-STARTER's templates/deno/gate.sh for THIS repository. Two
-# deliberate differences, both from measurements of the tree it runs on, both
-# recorded in INCIDENTS.md — read that file before "fixing" either one:
+# Adapted from AI-DEV-STARTER's templates/deno/gate.sh for THIS repository. One
+# deliberate difference, from a measurement of the tree it runs on and recorded
+# in INCIDENTS.md — read that file before "fixing" it:
 #
-#   - lint is a ratchet: the whole tree is linted, but only a violation a file
-#     did NOT have at HEAD fails the gate. The tree arrived with 21 pre-existing
-#     lint problems in 13 files, and a gate that blocks every change which
-#     happens to open one of them is a gate people learn to bypass.
-#   - format tolerates a file that was ALREADY unformatted at HEAD (web/*.html
-#     arrived that way); a file this branch breaks still fails.
+#   - format tolerates a file that was ALREADY unformatted at HEAD (web/*.html,
+#     web/app.js and several api/*.ts arrived that way); a file this branch
+#     breaks still fails.
+#
+# Lint is deliberately NOT in that list any more. It used to be a ratchet that
+# excused 21 pre-existing problems; the backlog was cleared on 2026-09-20 and the
+# ratchet was deleted in the same commit. Lint is absolute now — see INCIDENTS.md.
 #
 # Bypass deliberately, never accidentally:  git commit --no-verify / git push --no-verify
 #
@@ -87,55 +88,25 @@ fi
 note "$(printf '%s\n' "$touched" | grep -c .) file(s) in this change"
 
 # ---------------------------------------------------------------- 1. lint
-# Whole tree, attributed per file AND per violation: a file this branch touches
-# is linted as a whole, but only the violations it did NOT have at HEAD fail the
-# gate (a ratchet, the same idea as the format stage below). The tree arrived
-# with 21 problems in 13 files; blocking every change that happens to open one of
-# those files is how a gate teaches people to type --no-verify.
+# Absolute: the whole tree, every rule the declared rule set enables, no
+# baseline and no exceptions. The tree arrived with 21 pre-existing problems in
+# 13 files and this stage used to be a ratchet (it failed only on a violation a
+# file did NOT already have at HEAD). The backlog was cleared on 2026-09-20 and
+# the ratchet went with it: a stage that tolerates "21 known problems" is one
+# everyone learns to ignore, and 40 lines of per-file HEAD comparison is a lot of
+# bash to keep once the tree has none. See INCIDENTS.md.
 step "lint"
 lint_out="$(deno task lint 2>&1)"; lint_rc=$?
-lint_files="$(
-  printf '%s\n' "$lint_out" | sed -n 's/^ *--> *//p' | sed 's/:[0-9]*:[0-9]*$//' |
-    sed "s|^$PWD/||" | sort -u
-)"
-count_in() { # count_in <file> <lint output>
-  printf '%s\n' "$2" | grep -cE "^ *--> *(.*/)?$1(:[0-9]+:[0-9]+)?$" || true
-}
 if [ "$lint_rc" -eq 0 ]; then
   printf '%s\n' "$lint_out" | grep -E "Checked [0-9]+ files|Found 0 problems" || note "clean"
-elif [ -z "$lint_files" ]; then
+elif [ -z "$(printf '%s\n' "$lint_out" | sed -n 's/^ *--> *//p')" ]; then
+  # No file was named, so this is a config or syntax error rather than a rule
+  # violation — a tree that cannot be linted at all is worse than a dirty one.
   printf '%s\n' "$lint_out" | head -20
   fail "deno task lint failed without naming a file (a config or syntax error — the output above)"
 else
-  mine="$(printf '%s\n' "$lint_files" | grep -Fxf <(printf '%s\n' "$touched") || true)"
-  if [ -z "$mine" ]; then
-    note "not mine: $(printf '%s\n' "$lint_out" | grep -c '^error\[') pre-existing problem(s) in $(
-      printf '%s\n' "$lint_files" | grep -c .
-    ) file(s) this branch does not touch (see INCIDENTS.md)"
-  else
-    tmpdir="$(mktemp -d)"
-    new_violations=""
-    for f in $mine; do
-      now="$(count_in "$f" "$lint_out")"
-      was=0
-      if git cat-file -e "HEAD:$f" 2>/dev/null; then
-        # Lint the file as HEAD had it; its violations are not this branch's.
-        head_copy="$tmpdir/$(basename "$f")"
-        git show "HEAD:$f" >"$head_copy" 2>/dev/null
-        was="$(count_in "$(basename "$f")" "$(deno lint "$head_copy" 2>&1)")"
-      fi
-      if [ "$now" -gt "$was" ]; then
-        new_violations="$new_violations $f($was->$now)"
-        printf '%s\n' "$lint_out" | grep -A1 -E "^ *--> *(.*/)?$f(:[0-9]+:[0-9]+)?$" | head -20
-      fi
-    done
-    rm -rf "$tmpdir"
-    if [ -n "$new_violations" ]; then
-      fail "deno lint found new problems in:$new_violations (was->now; fix them, or make the same fix at HEAD first)"
-    else
-      note "no new lint problems in the $(printf '%s\n' "$mine" | grep -c .) file(s) this branch touches ($(printf '%s\n' "$lint_out" | grep -c '^error\[') pre-existing in the tree)"
-    fi
-  fi
+  printf '%s\n' "$lint_out" | sed -n 's/^ *--> *//p' | sed "s|^$PWD/||" | sort -u | sed 's/^/   /'
+  fail "deno task lint ($(printf '%s\n' "$lint_out" | grep -c '^error\[') problem(s), every one of them a failure; full output: deno task lint"
 fi
 
 # ---------------------------------------------------------------- 2. tests
@@ -201,6 +172,14 @@ if [ ! -f "$VERSION_FILE" ]; then
 else
   app_version="$(sed -n 's/.*APP_VERSION *= *"\([^"]*\)".*/\1/p' "$VERSION_FILE" | head -1)"
   refs="$(grep -ho '?v=[^"&]*' web/*.html 2>/dev/null | sed 's/^?v=//' | sort -u || true)"
+  # Every local asset reference, versioned or not, minus the versioned ones: what
+  # is left is a page loading /styles.css or /email.js bare. Restricted to
+  # /-rooted .css/.js so page links and external URLs are not asked for a version
+  # they cannot have. (The four static pages shipped unversioned until 2026-09-20.)
+  unversioned="$(
+    grep -HoE '(src|href)="/[^"]*\.(css|js)(\?[^"]*)?"' web/*.html 2>/dev/null |
+      grep -v '?v=' | sed 's/^/   /' || true
+  )"
   if [ -z "$app_version" ]; then
     fail "could not read APP_VERSION from $VERSION_FILE (the sed expects: export const APP_VERSION = \"x.y.z\";)"
   elif [ -z "$refs" ]; then
@@ -210,10 +189,15 @@ else
     if [ -n "$mismatch" ]; then
       printf '%s\n' "$mismatch" | sed 's/^/   ?v=/'
       fail "web/*.html says ?v=$(printf '%s' "$mismatch" | tr '\n' ' ') but $VERSION_FILE says $app_version (bump both, from the same edit)"
-    else
+    fi
+    if [ -n "$unversioned" ]; then
+      printf '%s\n' "$unversioned"
+      fail "unversioned asset reference(s) above — every local .css/.js a page loads must carry ?v=$app_version, or that page keeps serving last week's file out of the browser cache"
+    fi
+    if [ -z "$mismatch" ] && [ -z "$unversioned" ]; then
       note "$VERSION_FILE == web/*.html ?v= == $app_version ($(
         grep -ho '?v=[^"&]*' web/*.html | grep -c .
-      ) reference(s))"
+      ) reference(s) over $(ls web/*.html | wc -l | tr -d ' ') page(s), none unversioned)"
     fi
   fi
 fi

@@ -14,10 +14,59 @@ rationale is the load-bearing part.
 
 ## Deliberate deviations from the AI-DEV-STARTER gate, and why
 
-`scripts/gate.sh` is adapted from the kit's `templates/deno/gate.sh`. Two stages differ on purpose,
-both because of what this particular tree already contained on 2026-09-19 (the first two entries
-below). Everything else — the env/lint/tests/ format/artifact-identity order, the touched-file list,
-the `GATE PASSED` verdict — is the kit's.
+`scripts/gate.sh` is adapted from the kit's `templates/deno/gate.sh`. One stage differs on purpose,
+because of what this particular tree already contained on 2026-09-19: `format` tolerates drift that
+was already at `HEAD` (the entry below). Everything else — the
+env/lint/tests/format/artifact-identity order, the touched-file list, the `GATE PASSED` verdict — is
+the kit's.
+
+A second deviation lived here from 2026-09-19 to 2026-09-20: a **lint ratchet**. It is gone. The
+21-problem backlog it excused was cleared and the ratchet was deleted in the same commit — see the
+entry below for the measurement that showed the ratchet was _hiding_ a swapped violation, not merely
+tolerating a pre-existing one.
+
+---
+
+## 2026-09-20 — the lint ratchet was excusing a SWAPPED violation, so it was excusing nothing
+
+What broke: The stage compared a touched file's violation **count** now against the count the same
+file had at `HEAD`, and failed only if the count went up. That is not "no new problems": a file with
+one violation at `HEAD` can trade it for a different one and the count never moves. Measured on
+`api/characters.ts` — `deno lint` on the `HEAD` blob reports `Found 1 problem` (its unpinned
+`jsr:@oak/oak` import); the same file with that import pinned **and** a brand-new `no-unused-vars`
+injected reports 1 problem, so `now (1) > was (1)` is false and the old stage passed. The 13
+unpinned imports were also the kind of problem a ratchet licenses you to keep forever: the verdict
+then depended on which packages were published when, not on the code. Check added: the lint stage is
+now absolute (the whole tree, no baseline), and the 21 problems were fixed rather than excused — 13
+imports pinned to the exact versions already in `deno.lock` (`@oak/oak@17.2.0`,
+`@db/postgres@0.19.5`, `@db/sqlite@0.13.0`), 5 unused symbols deleted (`q`, `res` and a
+`let`→`const` in `scripts/seed.ts`, `esc` in `web/app.js`, two unused `queryArray` imports), 2
+`any`s typed as Oak's `Context`. Evidence: the same one-violation probe now prints
+`api/characters.ts:11:7` and `GATE FAILED` (rc 1). Why it must stay deleted: restoring a count-based
+ratchet restores the blind spot, and a stage that reports "21 known problems" is one every reader
+learns to skip. The trade this accepts: `deno lint`'s rule set is whatever the installed Deno tags
+`recommended`, so a Deno upgrade that adds a rule turns this red with no code change — the fix is
+then an explicit rule decision in `deno.json` (which already declares `lint.rules.tags`), never a
+re-installed baseline. The gate prints the Deno version in its `env` stage, which is what makes that
+diagnosable.
+
+---
+
+## 2026-09-20 — four pages loaded their stylesheet and scripts unversioned
+
+What broke: The artifact-identity pair only ever looked for `?v=` values — it validated the ones it
+found in `web/index.html` and said nothing about the four static pages (`about`, `privacy`, `terms`,
+`copyright`), which loaded `/styles.css`, `/email.js` and `/account-actions.js` bare. A returning
+visitor keeps the old stylesheet (or the old `account-actions.js`) after a deploy: the same
+invisible-deploy bug the pair exists for, one page over. Check added: `?v=` on all eleven local
+asset references across the five pages, and the identity stage now flags **any** `/`-rooted
+`.css`/`.js` reference with no `?v=`, not just a mismatched one; `tests/deno/app_version_test.ts`
+asserts the same rule over the pages it enumerates from disk, plus a synthetic case proving the
+checker can fail. Evidence: de-versioning `/styles.css` in `web/about.html` makes the gate print
+`web/about.html:href="/styles.css"` with `GATE FAILED` (rc 1) and fails the test by name. Why it
+must stay: A page is the unit the browser caches. A rule that only inspects references which already
+carry a version cannot see a reference that has none — which is exactly the state a newly added page
+starts in.
 
 ---
 
@@ -126,6 +175,12 @@ prompt (agent-instruction files are protected), and this change ran headless, so
 out and the write was refused — correctly: silence is not consent. Check added: No check can catch
 this one. The contract was written to `docs/PROJECT-CONTRACT.md` instead, with the reason at the top
 of that file, and activating it is one human action: `git mv docs/PROJECT-CONTRACT.md CLAUDE.md`
-(plus the prompt). Why it must stay: A future agent that finds the contract in `docs/` and wonders
-why should not "tidy" it into `CLAUDE.md` and trip the same guard mid-run. If the move happens,
-delete this entry and the note at the top of the file — the incident is over.
+(plus the prompt). Second attempt (2026-09-20, card `t_b7a6fa85`): the install was attempted again
+through the file-write tool with the finished document as the content, and refused again with
+`BLOCKED: write to protected agent-instruction file(s) (CLAUDE.md) approval prompt timed out without
+a user response. Silence is not consent.`
+No retry, no shell workaround, no rename-and-edit — the one-command activation above is still the
+only path, and this is a deliberate limit of unattended runs, not a bug to route around. Why it must
+stay: A future agent that finds the contract in `docs/` and wonders why should not "tidy" it into
+`CLAUDE.md` and trip the same guard mid-run. If the move happens, delete this entry and the note at
+the top of the file — the incident is over.
