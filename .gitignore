@@ -5,6 +5,13 @@
 # https://docs.deno.com/runtime/fundamentals/setup/#deno_dir
 .deno/
 
+# The DEPLOYED service's DENO_DIR, which lives inside the deploy dir: the VPS unit
+# sets Environment=DENO_DIR=/opt/TNGPlaylists/.deno-cache. The directory must stay
+# on disk (the running service reads and writes it), so it is ignored rather than
+# removed — that is what keeps `git status --short` in the deploy dir empty, and
+# that command is how production state is read (see the vps-deno-app-deployment skill).
+.deno-cache/
+
 # Coverage reports
 # https://docs.deno.com/runtime/reference/cli/coverage/
 coverage/
