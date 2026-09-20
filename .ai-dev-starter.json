@@ -1,16 +1,16 @@
 {
   "kit": "AI-DEV-STARTER",
   "url": "https://github.com/HarryPehkonen/AI-DEV-STARTER",
-  "revision": "fb387f2044989f76bb2fe234cef39e85ac050328",
+  "revision": "951608c2675a2f5c2d0b59d9c19c632d23a043af",
   "recorded_at": "2026-09-20",
   "record_kind": "retroactive",
-  "record_note": "Wired by hand on 2026-09-19 (commit 3b92406 'quality baseline: gate, contract tests, version pair'), before the kit existed as a git repo — so `revision` is the kit's FIRST PUBLISHED commit, not the exact copy point; do not read it as the tree this repo was copied from. Every copied artifact is deliberately adapted for a Deno 2 + Oak + Postgres app; each reason is below and is also written in INCIDENTS.md. The kit's C++ and Python artifacts (tools/ci.sh, .ci.env.example, templates/*/gate.sh for the other language) were never applicable here and are not listed. Rule that keeps this file true: any commit that edits a copied artifact must update that artifact's repo_sha256 in the same commit.",
+  "record_note": "Wired by hand on 2026-09-19 (commit 3b92406 'quality baseline: gate, contract tests, version pair'), before the kit existed as a git repo — so `revision` is the kit's FIRST PUBLISHED commit, not the exact copy point; do not read it as the tree this repo was copied from. Every copied artifact is deliberately adapted for a Deno 2 + Oak + Postgres app; each reason is below and is also written in INCIDENTS.md. The kit's C++ and Python artifacts (tools/ci.sh, .ci.env.example, templates/*/gate.sh for the other language) were never applicable here and are not listed. Rule that keeps this file true: any commit that edits a copied artifact must update that artifact's repo_sha256 in the same commit. **2026-09-20, card t_0cc793fb:** `revision` moved to 951608c: the kit's `kit probes` step was ported into `scripts/gate.sh` (the mechanism for \"a fix that must propagate ships a probe\"). No probe is carried yet — this repo's gate is the deno copy and the kit's first probe guards a C++ gate — so the step SKIPs loudly until one is. Still recorded adapted:true, because the copy is a fork, as before.",
   "files": [
     {
       "repo_path": "scripts/gate.sh",
       "kit_path": "templates/deno/gate.sh",
-      "repo_sha256": "8d58f0df6958c8bcd24376a2541a968210f0c1bb39256750c580f58055cd606c",
-      "kit_sha256": "3e4c625108c7de01700e60ca784066206b57d685ec4e260b378b92922945fc6c",
+      "repo_sha256": "be44094a6115169804fbb55e189804999b41c26747bca411c40c7d4a43a5acfe",
+      "kit_sha256": "5285e870fe932141c9f0c9831f11b78cfcf5f189ec51be77444d7f0124d235bf",
       "adapted": true,
       "adapted_why": "Deno app, not the kit's public/version.js <-> sw.js pair: artifact-identity checks web/version.js APP_VERSION against the ?v= on every local asset reference in every page (and fails when web/ changes without web/version.js); added an env stage and a 'files this branch touches' helper; format tolerates a file already unformatted at HEAD; lint is absolute, no baseline."
     },
@@ -26,7 +26,7 @@
       "repo_path": ".githooks/pre-push",
       "kit_path": "templates/hooks/pre-push",
       "repo_sha256": "bbdbd4787dfc0d363b84c10a1dc539f61352346cf489ff51eed5b01ac02bd5a4",
-      "kit_sha256": "2c82ed7099fc5687795264521be327fdda23e8c02eadd3ac12bd9667186c0d18",
+      "kit_sha256": "f94958bcd22089f12d3987564ec2965d99577f6c667ee64ded466aa937e9a5eb",
       "adapted": true,
       "adapted_why": "The C++-only paragraph (clean worktree + pristine checkout of HEAD) is deleted; the Deno gate is already the whole gate and carries its own clean-checkout story."
     },
@@ -34,7 +34,7 @@
       "repo_path": "INCIDENTS.md",
       "kit_path": "INCIDENTS.md",
       "repo_sha256": "92570926186fd8bb1476ec352e874e3d10588b87201d3df96c483b5ffffe4d5f",
-      "kit_sha256": "28928d4081780f7fd1432112eba4261e32e5a8985964378285b944f9576d88ff",
+      "kit_sha256": "aef9beb070e319176ef135eed5317ec8caab4bb0192a68a452c9d6841ebd4c45",
       "adapted": true,
       "adapted_why": "Seeded from the kit's rule block on 2026-09-19 and carries this repo's own entries plus a 'Deliberate deviations from the AI-DEV-STARTER gate' section; the kit's own 2026-09-19/20 entries are deliberately NOT copied — this file is per-repo history, so a sync must never overwrite it with the kit's."
     },
