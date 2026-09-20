@@ -10,7 +10,7 @@
  *   deno run --allow-net --allow-read --allow-env api/main.ts
  */
 
-import { Application, send } from "jsr:@oak/oak";
+import { Application, send } from "jsr:@oak/oak@17.2.0";
 import { episodesRouter } from "./episodes.ts";
 import { charactersRouter } from "./characters.ts";
 import { searchRouter } from "./search.ts";

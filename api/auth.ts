@@ -17,7 +17,7 @@
  *   ADMIN_EMAILS (comma-separated, first user with one of these → admin)
  */
 
-import { Router } from "jsr:@oak/oak";
+import { type Context, Router } from "jsr:@oak/oak@17.2.0";
 import { getCookies, setCookie, deleteCookie } from "jsr:@std/http@1/cookie";
 import { queryObject } from "./db.ts";
 
@@ -125,7 +125,7 @@ export async function getCurrentUser(ctx: {
 }
 
 /** Oak middleware: reject with 401 if not logged in, else attach user to ctx.state. */
-export async function requireAuth(ctx: any, next: () => Promise<unknown>) {
+export async function requireAuth(ctx: Context, next: () => Promise<unknown>) {
   const user = await getCurrentUser(ctx);
   if (!user) {
     ctx.response.status = 401;
@@ -138,7 +138,7 @@ export async function requireAuth(ctx: any, next: () => Promise<unknown>) {
 
 /** Oak middleware: reject with 403 unless the user has one of the given roles. */
 export function requireRole(...roles: ("reader" | "writer" | "admin")[]) {
-  return async (ctx: any, next: () => Promise<unknown>) => {
+  return async (ctx: Context, next: () => Promise<unknown>) => {
     const user = await getCurrentUser(ctx);
     if (!user) {
       ctx.response.status = 401;

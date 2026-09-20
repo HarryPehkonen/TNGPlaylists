@@ -13,8 +13,8 @@
  *   DATABASE_URL=postgres://tng_user:PASS@host:5432/tngplaylists
  */
 
-import { Database } from "jsr:@db/sqlite";
-import { Client } from "jsr:@db/postgres";
+import { Database } from "jsr:@db/sqlite@0.13.0";
+import { Client } from "jsr:@db/postgres@0.19.5";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -62,10 +62,6 @@ console.log("✓ Schema loaded");
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function q(s: string): string {
-  return s.replace(/'/g, "''");
-}
 
 /**
  * Batch multi-row insert. Builds a single INSERT with many VALUES tuples
@@ -120,7 +116,7 @@ const episodes = sqlite.prepare(`
 const epIdMap = new Map<number, number>();
 
 for (const e of episodes) {
-  const res = await pg.queryArray(
+  await pg.queryArray(
     `INSERT INTO episodes
        (episode_id, season, episode_number, episode_end, title,
         site_transcript_id, filename, original_air_date, us_viewers_millions)
@@ -256,7 +252,7 @@ for (const f of Deno.readDirSync(SUMMARIES_DIR)) {
 
   // Find the episode in SQLite (need filename match: TNG_S{season}E{ep}.txt)
   // Double episodes have filename TNG_S1E01-E02.txt
-  let filename = `TNG_S${season}E${String(epNum).padStart(2, "0")}.txt`;
+  const filename = `TNG_S${season}E${String(epNum).padStart(2, "0")}.txt`;
   const transcriptFile = [...filenameToEpId.keys()].find(
     (k) => k === filename || k.startsWith(`TNG_S${season}E${String(epNum).padStart(2, "0")}-`),
   );

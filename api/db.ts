@@ -5,7 +5,7 @@
  * from DATABASE_URL env var. Follows the Notes app pattern.
  */
 
-import { Client } from "jsr:@db/postgres";
+import { Client } from "jsr:@db/postgres@0.19.5";
 
 export interface DbConfig {
   url: string;

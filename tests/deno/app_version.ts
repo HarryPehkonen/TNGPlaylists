@@ -19,10 +19,12 @@
  * (which also fails when web/ changes without web/version.js changing) and by
  * app_version_test.ts, so the gate's test stage catches it too.
  *
- * Deliberately narrow for now: only web/index.html carries versioned asset
- * references. The four static pages (about/privacy/terms/copyright) still load
- * /styles.css and /email.js unversioned; the check below picks up any `?v=`
- * they gain automatically, so versioning them later needs no change here.
+ * Both halves are checked over EVERY page under web/, not just the entry point.
+ * Until 2026-09-20 the four static pages (about/privacy/terms/copyright) loaded
+ * /styles.css and /email.js unversioned — the same stale-asset bug one page over,
+ * where a stylesheet change ships and the visitor keeps the old sheet. The rule
+ * is "every local asset reference carries the number"; `isLocalAsset()` is what
+ * makes it checkable, and the pages are enumerated from disk, never listed.
  */
 
 /** Every asset reference in an HTML file: `<link href>` / `<script src>`. */
@@ -38,6 +40,15 @@ export function assetRefs(html: string): string[] {
 export function refVersion(ref: string): string | null {
   const match = ref.match(/[?&]v=([^&"]+)/);
   return match ? match[1] : null;
+}
+
+/**
+ * Is this reference a local asset the browser caches — a `/`-rooted `.css` or
+ * `.js`? Page navigations (`/about.html`) and external URLs (`https://…`) are
+ * deliberately not, because they cannot carry a build number that means anything.
+ */
+export function isLocalAsset(ref: string): boolean {
+  return /^\/.*\.(css|js)(\?|$)/.test(ref);
 }
 
 /** The APP_VERSION literal declared in web/version.js. */

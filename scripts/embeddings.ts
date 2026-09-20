@@ -12,7 +12,7 @@
  *   deno run --allow-read --allow-write --allow-net --allow-env scripts/embeddings.ts
  */
 
-import { Client } from "jsr:@db/postgres";
+import { Client } from "jsr:@db/postgres@0.19.5";
 
 const DB_URL = Deno.env.get("DATABASE_URL");
 if (!DB_URL) {

@@ -19,8 +19,8 @@
  * filtered set semantically (when embeddings exist) or falls back to ILIKE.
  */
 
-import { Router } from "jsr:@oak/oak";
-import { queryArray, queryObject } from "./db.ts";
+import { Router } from "jsr:@oak/oak@17.2.0";
+import { queryObject } from "./db.ts";
 
 export const searchRouter = new Router();
 

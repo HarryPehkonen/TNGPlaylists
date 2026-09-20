@@ -62,12 +62,6 @@ function toast(msg) {
   t._timer = setTimeout(() => (t.hidden = true), 2500);
 }
 
-function esc(s) {
-  const div = document.createElement("div");
-  div.textContent = String(s ?? "");
-  return div.innerHTML;
-}
-
 // ---------------------------------------------------------------------------
 // Auth
 // ---------------------------------------------------------------------------

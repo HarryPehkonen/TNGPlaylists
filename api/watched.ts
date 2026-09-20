@@ -13,7 +13,7 @@
  * DELETE /api/watched/:episodeId  — mark unwatched (idempotent)
  */
 
-import { Router } from "jsr:@oak/oak";
+import { Router } from "jsr:@oak/oak@17.2.0";
 import { queryObject } from "./db.ts";
 import { requireAuth } from "./auth.ts";
 

@@ -8,7 +8,7 @@
  */
 import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
 
-import { appVersion, assetRefs, refVersion } from "./app_version.ts";
+import { appVersion, assetRefs, isLocalAsset, refVersion } from "./app_version.ts";
 import { htmlFiles, read } from "./repo.ts";
 
 const versionSource = await read("web/version.js");
@@ -42,6 +42,45 @@ Deno.test("version: every `?v=` in web/*.html equals APP_VERSION", () => {
     declaredVersions.map((v) => `${v.file}: ${v.ref}`),
     [],
     `web/version.js says ${declared}`,
+  );
+});
+
+Deno.test("version: every local asset reference in web/*.html carries the build number", () => {
+  // The pages are enumerated from disk (repo.ts) and the asset shape from the
+  // reference, so a NEW page cannot arrive unversioned without failing here.
+  const unversioned = pages.flatMap(({ file, html }) =>
+    assetRefs(html)
+      .filter((ref) => isLocalAsset(ref) && refVersion(ref) === null)
+      .map((ref) => `${file}: ${ref}`)
+  );
+  assertEquals(
+    unversioned,
+    [],
+    `every local .css/.js a page loads must carry ?v=${declared}, or that page keeps ` +
+      `serving last week's file out of the browser cache`,
+  );
+
+  // Non-vacuity: the rule above passes trivially if nothing counts as a local
+  // asset, which is exactly how a "the assets are versioned" rule goes quiet.
+  const local = pages.flatMap(({ html }) => assetRefs(html).filter(isLocalAsset));
+  assert(local.length >= 10, `expected 10+ local asset references, found ${local.length}`);
+});
+
+Deno.test("version: the local-asset rule fires on that shape and only that shape", () => {
+  assert(isLocalAsset("/styles.css"), "a bare stylesheet link is a local asset");
+  assert(isLocalAsset("/email.js?v=1.0.0"), "a versioned one is too");
+  assert(!isLocalAsset("/about.html"), "a page navigation is not an asset");
+  assert(!isLocalAsset("https://deno.com"), "an external URL is not a local asset");
+  assert(!isLocalAsset("styles.css"), "an unprefixed path is not served from the root");
+
+  // The failure this rule exists for: a page that loads /styles.css bare. The
+  // synthetic case proves the checker can fail, which the repo half cannot.
+  const refs = assetRefs(`<link rel="stylesheet" href="/styles.css">`);
+  assertEquals(refs, ["/styles.css"]);
+  assertEquals(
+    refs.filter((ref) => isLocalAsset(ref) && refVersion(ref) === null),
+    ["/styles.css"],
+    "a bare asset reference must be caught, not skipped",
   );
 });
 
