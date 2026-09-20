@@ -2,10 +2,13 @@
   "version": "5",
   "specifiers": {
     "jsr:@db/postgres@*": "0.19.5",
+    "jsr:@db/postgres@0.19.5": "0.19.5",
     "jsr:@db/sqlite@*": "0.13.0",
+    "jsr:@db/sqlite@0.13.0": "0.13.0",
     "jsr:@denosaurs/plug@1": "1.1.0",
     "jsr:@oak/commons@1": "1.0.1",
     "jsr:@oak/oak@*": "17.2.0",
+    "jsr:@oak/oak@17.2.0": "17.2.0",
     "jsr:@std/assert@1": "1.0.19",
     "jsr:@std/bytes@1": "1.0.6",
     "jsr:@std/bytes@^1.0.5": "1.0.6",
