@@ -1,0 +1,63 @@
+# TNGPlaylists' gate. The policy is this file; the engine is kit-ci, installed once per
+# machine:
+#
+#     cmake -S ~/hermes-workspace/KitCI -B build && cmake --build build
+#     cmake --install build --prefix ~/.local        # -> ~/.local/bin/kit-ci
+#
+# One definition, three callers - by hand (scripts/gate.sh), git on commit and on push
+# (.githooks/, which names the tier), and a clean checkout elsewhere (a nightly job: fresh
+# `git clone` into a temp dir, then the same scripts/gate.sh). Changing the gate means
+# editing this file: `kit-ci --list` and `kit-ci --graph` read the same parse the run uses.
+#
+# Until 2026-10-06 the gate WAS one file: a 282-line scripts/gate.sh that ran five steps and
+# printed its own summary (card t_075c0a6f). Every check it ran is declared here, in the
+# order it ran them, and the work of a check lives in a script next to this file. What could
+# not be expressed in this vocabulary, and how each case was resolved, is in INCIDENTS.md.
+
+[gate]
+repo = "tngplaylists"
+
+# The whole gate: this repo's checks are seconds (a 2-second suite, a 1-second lint), so
+# commit runs all of them - the same line the old hooks drew, kept.
+[tier.fast]
+stages = ["env", "lint", "tests", "format", "version"]
+
+# pre-push: the same list. It is written as "*" so a stage added above cannot be run by one
+# caller and forgotten by the other.
+[tier.full]
+stages = ["*"]
+
+# Deno is the runtime: it is the tool that IS the job here, so its absence is a failure, not
+# a skip. A machine with no Deno can certify nothing about this repo.
+[stage.env]
+cmd = "scripts/env.sh"
+
+# the whole tree, every rule the declared rule set enables, no baseline and no exceptions
+[stage.lint]
+cmd = "scripts/lint.sh"
+
+# the suite, with its own guards: a green run is not accepted as a result line, and the live
+# HTTP envelope check says so when DATABASE_URL is unset rather than passing silently
+[stage.tests]
+cmd = "scripts/tests.sh"
+
+# the files this branch touches, and only the drift this branch introduces; the STAGED copy
+# is checked too, because a commit records the index
+[stage.format]
+cmd = "scripts/format.sh"
+
+# APP_VERSION in web/version.js == the ?v= on every asset reference in web/*.html, and a web/
+# change without a bump is a deploy that stays invisible
+[stage.version]
+cmd = "scripts/version.sh"
+
+# ---------------------------------------------------------------- what did not survive
+# `kitprobes` - the step that ran tools/kit-probes/*.sh, holding this copy to the
+# AI-DEV-STARTER fixes it claimed to carry. Its subject was scripts/gate.sh, which this
+# conversion replaces, so the probes are deleted with it and every guarantee they stood for
+# is recorded in INCIDENTS.md with the file that now carries it.
+#
+# The old gate's `late_note` ("(last commit, since this checkout is level with origin/main)")
+# has no home either: kit-ci prints its own verdict line, and the fact that a level-with-
+# origin checkout is judged on its last commit is a property of the touched-file helper in
+# scripts/gate-env.sh, where it is documented.

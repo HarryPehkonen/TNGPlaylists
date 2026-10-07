@@ -27,6 +27,38 @@ tolerating a pre-existing one.
 
 ---
 
+
+## 2026-10-06 — the gate is gate.toml, not a 282-line script (wiring record, not a breakage)
+
+What changed:      `scripts/gate.sh` is no longer the gate: it is a 36-line wrapper around
+                   `kit-ci`, the engine installed once per machine (`cmake --install build
+                   --prefix ~/.local`). What it runs is the new tracked `gate.toml` — the
+                   policy: 5 stages in two tiers — plus `scripts/gate-env.sh` (the Deno on
+                   PATH, the touched-file list and the helpers every stage reads) and one
+                   script per stage. This entry is a wiring record, not an incident — it is
+                   here because the hooks and the old gate both say "if you edit this file,
+                   say why in INCIDENTS.md".
+Check moved:       Every check the old script ran is still run, in the same order: env lint tests format version.
+                   The teeth were re-measured on the converted gate rather than assumed: an
+                   unformatted new source file dropped in the tree makes the gate report GATE FAILED naming the `format` stage —
+                   captured in `gate-evidence/t_075c0a6f/TNGPlaylists-teeth.txt`.
+Probes:            `tools/kit-probes/` is DELETED. A probe checks a FILE, and the file it
+                   checked (the old scripts/gate.sh) is gone; a check whose verdict is an
+                   accident of how a probe searches is the failure mode the gate exists to
+                   prevent. Measured 2026-10-06, each probe from HEAD run against the new
+                   entry point `scripts/gate.sh`:
+                   * format-checks-staged-deno.sh   GREEN against scripts/gate.sh
+                   The guarantee itself did not go:
+                   * format-checks-staged-deno    -> scripts/format.sh — the staged-copy check, in the stage that owns formatting (the formatter-as-a-pure-function test, which is what deno fmt 2.9.6 allows)
+                   and the engine's own runner covers the rest: a stage whose command does
+                   not exit 0 fails the run, so a green run over steps that never ran is not
+                   expressible. The old script's `late_note` ("(last commit, since this
+                   checkout is level with origin/main)") has no home: kit-ci prints the
+                   verdict, and that fact is documented where it lives, in the touched-file
+                   helper in scripts/gate-env.sh.
+
+---
+
 ## 2026-09-20 — the lint ratchet was excusing a SWAPPED violation, so it was excusing nothing
 
 What broke: The stage compared a touched file's violation **count** now against the count the same

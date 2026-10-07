@@ -9,20 +9,17 @@
 #
 # Deliberate bypass when you need one:  git push --no-verify
 #
+# 2026-10-06 (card t_075c0a6f): the stage list moved into gate.toml, so this hook names the
+# tier. The old hook also ran a `kitprobes` step; that step and its probe scripts went with
+# the conversion (the closing note in gate.toml has the reason).
 set -uo pipefail
 
 root=$(git rev-parse --show-toplevel) || exit 1
 
-if [ -x "$root/tools/ci.sh" ]; then
-    exec "$root/tools/ci.sh" \
-        --require-clean \
-        tree format build tests version asan tsan tidy pristine
-fi
-
 if [ -x "$root/scripts/gate.sh" ]; then
-    exec "$root/scripts/gate.sh"
+    exec "$root/scripts/gate.sh" --tier full
 fi
 
-printf 'pre-push: no gate found. Expected %s/tools/ci.sh (C++) or %s/scripts/gate.sh (deno/python).\n' \
-    "$root" "$root" >&2
+printf 'pre-push: no gate found. Expected %s/scripts/gate.sh (with gate.toml next to it).\n' \
+    "$root" >&2
 exit 1
